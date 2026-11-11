@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="바코드">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
@@ -79,6 +80,19 @@ input[type=text],select{width:100%;background:var(--card);border:1px solid var(-
   </div>
 </section>
 
+<!-- 스캔(바코드/QR 읽기) -->
+<section id="v-scanner" class="view">
+  <div class="row"><button class="btn" id="scBtn" onclick="toggleScan()">▶ 스캔 시작</button></div>
+  <video id="vid" playsinline muted style="width:100%;border-radius:8px;background:#000;display:none"></video>
+  <div class="msg" id="scMsg">바코드/QR을 카메라에 비추면 자동으로 읽어 목록에 추가합니다. 여러 개를 연속으로 읽을 수 있습니다.</div>
+  <div id="scList"></div>
+  <div class="row">
+    <button class="btn sec sm" onclick="scans=[];renderScans()">전체 지우기</button>
+    <select id="scType"><option>QR</option><option>CODE128</option><option>CODE39</option></select>
+  </div>
+  <div class="row"><button class="btn ok" onclick="makeFromScans()">읽은 코드로 바코드 생성</button></div>
+</section>
+
 <!-- 2. 직접 입력 -->
 <section id="v-manual" class="view">
   <div class="row">
@@ -111,6 +125,7 @@ input[type=text],select{width:100%;background:var(--card);border:1px solid var(-
 </main>
 <nav>
   <button data-v="scan" class="on">촬영</button>
+  <button data-v="scanner">스캔</button>
   <button data-v="manual">입력</button>
   <button data-v="result">결과</button>
   <button data-v="hist">히스토리</button>
@@ -133,6 +148,7 @@ let current = null;        // 현재 보는 묶음 {id,time,items:[{text,type}]}
 // ---------- 탭 ----------
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.v));
 function show(v){
+  if (v !== 'scanner') stopScan();
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
   if (v === 'hist') renderHist();
@@ -276,6 +292,57 @@ $('manText').addEventListener('paste', e => {
   const t = (e.clipboardData || window.clipboardData).getData('text');
   if (t) { e.preventDefault(); addManual(t); }
 });
+// ---- 스캔: 카메라로 바코드/QR 읽기 ----
+let scStream = null, scTimer = null, scReader = null, scans = [];
+function toggleScan(){ (scStream || scReader) ? stopScan() : startScan(); }
+async function startScan(){
+  const v = $('vid');
+  try {
+    let det = null;
+    if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch(e){} }
+    if (det) {
+      scStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+      v.srcObject = scStream; await v.play();
+      scTimer = setInterval(async () => { try { (await det.detect(v)).forEach(b => onScan(b.rawValue)); } catch(e){} }, 250);
+    } else if (window.ZXing) {
+      scReader = new ZXing.BrowserMultiFormatReader();
+      v.style.display = 'block';
+      await scReader.decodeFromConstraints({ video: { facingMode: 'environment' } }, v, r => { if (r) onScan(r.getText()); });
+    } else throw new Error('스캔 라이브러리를 불러오지 못했습니다');
+    v.style.display = 'block'; $('scBtn').textContent = '■ 스캔 중지';
+    $('scMsg').textContent = '비추는 중... 읽히면 진동과 함께 목록에 추가됩니다.';
+  } catch (e) {
+    stopScan();
+    $('scMsg').textContent = '카메라를 켤 수 없습니다: ' + e.message + ' (카메라 권한과 https 주소로 열었는지 확인하세요)';
+  }
+}
+function stopScan(){
+  clearInterval(scTimer); scTimer = null;
+  if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
+  if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
+  const v = $('vid'); v.style.display = 'none'; v.srcObject = null; $('scBtn').textContent = '▶ 스캔 시작';
+}
+function onScan(t){
+  if (!t || scans.some(s => s.text === t)) return;
+  scans.push({ text: t }); if (navigator.vibrate) navigator.vibrate(60);
+  renderScans();
+}
+function renderScans(){
+  const L = $('scList'); L.innerHTML = '';
+  scans.forEach((p, i) => {
+    const r = document.createElement('div'); r.className = 'row';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = p.text; inp.oninput = () => p.text = inp.value;
+    const x = document.createElement('button'); x.className = 'btn sec sm'; x.style.flex = '0 0 44px'; x.textContent = '✕';
+    x.onclick = () => { scans.splice(i, 1); renderScans(); };
+    r.append(inp, x); L.appendChild(r);
+  });
+}
+function makeFromScans(){
+  const items = scans.map(p => p.text.trim()).filter(Boolean).map(t => ({ text: t, type: $('scType').value }));
+  if (!items.length) return alert('읽은 코드가 없습니다.');
+  stopScan(); openBatch(items);
+}
+
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블러(화면 모아레 제거) 후 줄 단위 이진화
