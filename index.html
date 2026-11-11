@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>바코드 제작</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14171c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="바코드">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+:root{--bg:#14171c;--card:#1f242c;--fg:#e8ecf1;--mut:#8b95a3;--acc:#2f81f7;--ok:#2ea043;--bd:#323a46}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,"Malgun Gothic",sans-serif}
+body{display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+header{padding:12px 16px;font-weight:700;font-size:18px;border-bottom:1px solid var(--bd)}
+main{flex:1;overflow-y:auto;padding:12px 16px}
+nav{display:flex;border-top:1px solid var(--bd);background:var(--card)}
+nav button{flex:1;padding:14px 0;background:none;border:0;color:var(--mut);font-size:15px}
+nav button.on{color:var(--acc);font-weight:700}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:16px;font-weight:600}
+.btn.sec{background:var(--card);border:1px solid var(--bd);color:var(--fg)}
+.btn.ok{background:var(--ok)}
+.btn.sm{padding:8px 12px;font-size:14px}
+.row{display:flex;gap:8px;align-items:center;margin:8px 0}
+.row>*{flex:1}
+input[type=text],select{width:100%;background:var(--card);border:1px solid var(--bd);color:var(--fg);border-radius:8px;padding:10px;font-size:16px;font-family:Consolas,monospace}
+.view{display:none}.view.on{display:block}
+#imgwrap{position:relative;margin:8px 0;display:none}
+#imgwrap img{width:100%;display:block;border-radius:8px}
+.box{position:absolute;border:2px solid #f0a020;background:rgba(240,160,32,.12);border-radius:3px}
+.box.sel{border-color:var(--ok);background:rgba(46,160,67,.35)}
+.msg{color:var(--mut);font-size:13px;margin:6px 0}
+.item{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px;margin:8px 0}
+.slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;-webkit-overflow-scrolling:touch}
+.slide{flex:0 0 100%;scroll-snap-align:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px}
+.slide .bc{background:#fff;border-radius:8px;padding:8px;text-align:center}
+.slide canvas,.slide img{max-width:100%;height:auto}
+.cnt{text-align:center;color:var(--mut);margin:8px 0}
+.hist{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0}
+.hist small{color:var(--mut)}
+.err{color:#ff7b72;font-size:13px}
+#sel{display:none;position:fixed;inset:0;z-index:50;background:#000;flex-direction:column;touch-action:none}
+#sel.on{display:flex}
+#selStage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+#sel #imgwrap{display:inline-block;margin:0;line-height:0}
+#sel #imgwrap img{width:auto;max-width:100vw;max-height:calc(100dvh - 120px);border-radius:0}
+#selMsg{color:#fff;text-align:center;font-size:14px;padding:8px}
+.selBar{display:flex;gap:8px;padding:8px 12px calc(12px + env(safe-area-inset-bottom))}
+.selBar .btn{flex:1}
+.btn:disabled{opacity:.4}
+</style>
+</head>
+<body>
+<header>바코드 제작</header>
+<main>
+
+<!-- 1. 촬영 -->
+<section id="v-scan" class="view on">
+  <div class="row">
+    <button class="btn" onclick="cam.click()">📷 촬영 / 사진 선택</button>
+  </div>
+  <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+  <div class="msg" id="scanMsg">카메라로 화면을 찍으면 글자 영역이 자동으로 표시됩니다. 만들 항목을 눌러 선택하세요.</div>
+  <div id="thumbRow" class="row" style="display:none"><button class="btn sec" onclick="openSel()">✂️ 영역 지정 (다시 읽기)</button></div>
+  <div id="pick" style="display:none">
+    <div class="msg">읽은 항목 (눌러서 바로 수정)</div>
+    <div id="pickList"></div>
+    <div class="row">
+      <button class="btn sec sm" onclick="addPick('')">+ 직접 추가</button>
+      <button class="btn sec sm" onclick="picks=[];renderPick()">전체 지우기</button>
+      <select id="scanType"><option>QR</option><option>CODE128</option><option>CODE39</option></select>
+    </div>
+    <div class="row"><button class="btn ok" onclick="makeFromPick()">바코드 생성</button></div>
+  </div>
+</section>
+
+<!-- 2. 직접 입력 -->
+<section id="v-manual" class="view">
+  <div class="row">
+    <button class="btn sec" onclick="cam2.click()">📷 카메라 켜기</button>
+    <button class="btn sec" onclick="pasteText()">📋 붙여넣기</button>
+  </div>
+  <input id="cam2" type="file" accept="image/*" capture="environment" hidden>
+  <div id="shot" style="display:none;margin:8px 0"><img id="shotImg" style="width:100%;border-radius:8px;display:block"><button class="btn sec sm" style="margin-top:6px;width:100%" onclick="shot.style.display='none'">사진 닫기</button></div>
+  <div class="msg">① 카메라로 찍으면 사진이 아래에 크게 뜹니다 → ② 홈 버튼을 꾹 눌러 구글 AI로 글자를 선택해 <b>복사</b> → ③ 돌아와 <b>붙여넣기</b>. 붙여넣으면 입력칸의 기존 내용은 지워지고 새로 채워지며, 띄어쓰기/줄바꿈 기준으로 한 줄씩 정리됩니다.</div>
+  <textarea id="manText" rows="6" style="width:100%;background:var(--card);border:1px solid var(--bd);color:var(--fg);border-radius:8px;padding:10px;font-size:16px;font-family:Consolas,monospace" placeholder="84SC4XKF20NNB&#10;84647XK200NNB"></textarea>
+  <div class="row">
+    <select id="manType"><option>QR</option><option>CODE128</option><option>CODE39</option></select>
+    <button class="btn ok" onclick="makeFromManual()">바코드 생성</button>
+  </div>
+</section>
+
+<!-- 3. 결과 보기 -->
+<section id="v-result" class="view">
+  <div id="resTitle" class="msg"></div>
+  <div class="cnt" id="cnt"></div>
+  <div class="slides" id="slides"></div>
+</section>
+
+<!-- 4. 히스토리 -->
+<section id="v-hist" class="view">
+  <div id="histList"></div>
+  <div class="row"><button class="btn sec sm" onclick="clearHist()">히스토리 전체 삭제</button></div>
+</section>
+
+</main>
+<nav>
+  <button data-v="scan" class="on">촬영</button>
+  <button data-v="manual">입력</button>
+  <button data-v="result">결과</button>
+  <button data-v="hist">히스토리</button>
+</nav>
+
+<div id="sel">
+  <div id="selStage"><div id="imgwrap"><img id="photo"></div></div>
+  <div id="selMsg">읽을 부분을 손가락으로 드래그해 네모로 지정하세요</div>
+  <div class="selBar">
+    <button class="btn sec" onclick="closeSel()">닫기</button>
+    <button class="btn" id="selRead" disabled onclick="readSel()">이 영역 읽기</button>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const KEY = 'bc_history_v1';
+let picks = [];            // OCR 선택 항목 [{text}]
+let current = null;        // 현재 보는 묶음 {id,time,items:[{text,type}]}
+
+// ---------- 탭 ----------
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.v));
+function show(v){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  if (v === 'hist') renderHist();
+}
+
+// ---------- 저장소 ----------
+function loadHist(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
+function saveHist(h){ try { localStorage.setItem(KEY, JSON.stringify(h.slice(0, 200))); } catch(e){} }
+function persist(batch){
+  const h = loadHist(), i = h.findIndex(x => x.id === batch.id);
+  if (i >= 0) h[i] = batch; else h.unshift(batch);
+  saveHist(h);
+}
+
+// ---------- 촬영 + OCR ----------
+$('cam').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  e.target.value = '';
+  const img = await loadImage(f);
+  const max = 1800, sc = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  $('photo').src = c.toDataURL('image/jpeg', .9);
+  srcCanvas = c;
+  $('thumbRow').style.display = 'flex';
+  renderPick();
+  openSel();
+};
+function openSel(){
+  const old = document.querySelector('#imgwrap .box'); if (old) old.remove();
+  selRect = null; $('selRead').disabled = true;
+  $('selMsg').textContent = '읽을 부분을 손가락으로 드래그해 네모로 지정하세요';
+  $('sel').classList.add('on');
+}
+function closeSel(){ $('sel').classList.remove('on'); }
+function readSel(){ if (selRect) ocrRegion(...selRect); }
+let selRect = null;
+let srcCanvas = null, worker = null;
+async function getWorker(){
+  if (!worker) {
+    try {   // 정확도 높은 'best' 학습 데이터 (실패하면 기본값)
+      worker = await Tesseract.createWorker('eng', 1, { langPath: 'https://tessdata.projectnaptha.com/4.0.0_best' });
+    } catch (e) { worker = await Tesseract.createWorker('eng'); }
+    await worker.setParameters({
+      user_defined_dpi: '300',
+      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/.',
+      tessedit_pageseg_mode: '6'
+    });
+  }
+  return worker;
+}
+// 드래그로 영역 지정
+(function(){
+  const wrap = $('imgwrap'); let x0, y0, rect = null, drag = false;
+  const pos = e => { const r = wrap.getBoundingClientRect(); return [Math.max(0, Math.min(r.width, e.clientX - r.left)), Math.max(0, Math.min(r.height, e.clientY - r.top)), r]; };
+  wrap.style.touchAction = 'none';
+  wrap.addEventListener('pointerdown', e => {
+    if (!srcCanvas) return;
+    [x0, y0] = pos(e); drag = true; wrap.setPointerCapture(e.pointerId);
+    if (rect) rect.remove();
+    selRect = null; $('selRead').disabled = true;
+    rect =document.createElement('div'); rect.className = 'box sel'; rect.style.pointerEvents = 'none';
+    wrap.appendChild(rect);
+  });
+  wrap.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const [x, y] = pos(e);
+    rect.style.left = Math.min(x, x0) + 'px'; rect.style.top = Math.min(y, y0) + 'px';
+    rect.style.width = Math.abs(x - x0) + 'px'; rect.style.height = Math.abs(y - y0) + 'px';
+  });
+  wrap.addEventListener('pointerup', async e => {
+    if (!drag) return; drag = false;
+    const [x, y, r] = pos(e);
+    const w = Math.abs(x - x0), h = Math.abs(y - y0);
+    if (w < 15 || h < 10) { rect.remove(); return; }
+    const k = srcCanvas.width / r.width;
+    selRect = [Math.min(x, x0) * k, Math.min(y, y0) * k, w * k, h * k];
+    $('selRead').disabled = false;
+    $('selMsg').textContent = '맞으면 "이 영역 읽기", 다시 드래그하면 영역이 바뀝니다';
+  });
+})();
+function binarize(c){
+  const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), d = im.data;
+  const hist = new Array(256).fill(0), n = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) { const y = (d[i] * .299 + d[i+1] * .587 + d[i+2] * .114) | 0; d[i] = y; hist[y]++; }
+  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let wB = 0, sB = 0, best = 0, th = 128;
+  for (let t = 0; t < 256; t++) {                  // Otsu 임계값
+    wB += hist[t]; if (!wB) continue; const wF = n - wB; if (!wF) break;
+    sB += t * hist[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
+    if (v > best) { best = v; th = t; }
+  }
+  for (let i = 0; i < d.length; i += 4) { const v = d[i] > th ? 255 : 0; d[i] = d[i+1] = d[i+2] = v; d[i+3] = 255; }
+  g.putImageData(im, 0, 0);
+}
+// ---- 정밀 인식: 줄 분리 → 줄마다 여러 변형으로 읽고 다수결 ----
+function otsuTh(gr){
+  const hist = new Array(256).fill(0), n = gr.length; let sum = 0;
+  for (let i = 0; i < n; i++) { hist[gr[i]]++; sum += gr[i]; }
+  let wB = 0, sB = 0, best = 0, th = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t]; if (!wB) continue; const wF = n - wB; if (!wF) break;
+    sB += t * hist[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
+    if (v > best) { best = v; th = t; }
+  }
+  return th;
+}
+const validCode = t => /^[A-Z0-9\-_.\/]{6,}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t);
+function finishPicks(found){
+  let added = 0;
+  found.forEach(f => { if (!picks.some(p => p.text === f.text)) { picks.push({ text: f.text, el: null, warn: f.warn }); added++; } });
+  if (!added) { $('selMsg').textContent = '새로 읽힌 항목이 없습니다. 영역을 다시 지정하세요.'; $('selRead').disabled = false; return; }
+  renderPick(); closeSel();
+  $('scanMsg').textContent = added + '개 추가됨. 주황색 테두리는 읽기 결과가 엇갈린 항목이니 꼭 확인하세요.';
+}
+
+// ---- 입력 탭: 구글 렌즈 / 붙여넣기 ----
+let leftPage = false;
+document.addEventListener('visibilitychange', () => { if (document.hidden) leftPage = true; });
+function openLens(){
+  leftPage = false;
+  location.href = 'googleapp://lens';                 // 구글 앱의 렌즈 (설치되어 있으면 바로 열림)
+  setTimeout(() => { if (!leftPage) window.open('https://lens.google.com/', '_blank'); }, 1500);
+}
+function addManual(t){
+  const toks = t.split(/[\s,;]+/).map(s => s.trim()).filter(s => s.length >= 3);
+  if (!toks.length) return;
+  $('manText').value = toks.join('\n');             // 기존 내용은 지우고 새로 채움
+}
+$('cam2').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  $('shotImg').src = URL.createObjectURL(f); $('shot').style.display = 'block'; e.target.value = '';
+  $('shot').scrollIntoView();
+};
+async function pasteText(){
+  try { addManual(await navigator.clipboard.readText()); }
+  catch(e){ $('manText').focus(); alert('자동 붙여넣기가 막혀 있습니다. 입력칸을 길게 눌러 "붙여넣기"를 선택하세요.'); }
+}
+$('manText').addEventListener('paste', e => {
+  const t = (e.clipboardData || window.clipboardData).getData('text');
+  if (t) { e.preventDefault(); addManual(t); }
+});
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블러(화면 모아레 제거) 후 줄 단위 이진화
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  let a = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) a[y * w + x] = gr[(y0 + y) * W + x0 + x];
+  for (let k = 0; k < blur; k++) {
+    const b = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let s = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const yy = y + dy, xx = x + dx; if (yy >= 0 && yy < h && xx >= 0 && xx < w) { s += a[yy * w + xx]; n++; }
+      }
+      b[y * w + x] = s / n;
+    }
+    a = b;
+  }
+  return mkVariant(a, w, 0, 0, w - 1, h - 1, delta === null ? null : otsuTh(a) + delta);
+}
+function mkVariant(gr, W, x0, y0, x1, y1, th){      // th=null 이면 대비 확장 회색
+  const pad = 16, w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = h + pad * 2;
+  const g = c.getContext('2d'), im = g.createImageData(c.width, c.height), d = im.data;
+  let lo = 255, hi = 0;
+  if (th === null) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const v = gr[y * W + x]; if (v < lo) lo = v; if (v > hi) hi = v; }
+  for (let i = 0; i < d.length; i++) d[i] = 255;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const v = gr[(y0 + y) * W + x0 + x];
+    const o = ((y + pad) * c.width + x + pad) * 4;
+    const out = th === null ? Math.max(0, Math.min(255, (v - lo) * 255 / Math.max(1, hi - lo))) : (v > th ? 255 : 0);
+    d[o] = d[o + 1] = d[o + 2] = out;
+  }
+  g.putImageData(im, 0, 0);
+  const sc = Math.max(0.5, Math.min(3, 70 / h));      // 글자 높이를 인식에 좋은 크기로
+  const o2 = document.createElement('canvas'); o2.width = Math.round(c.width * sc); o2.height = Math.round(c.height * sc);
+  const g2 = o2.getContext('2d'); g2.imageSmoothingQuality = 'high'; g2.drawImage(c, 0, 0, o2.width, o2.height);
+  return o2;
+}
+async function ocrRegion(sx, sy, sw, sh){
+  $('selMsg').textContent = '글자 인식 중... (처음에는 데이터 다운로드로 조금 걸립니다)';
+  $('selRead').disabled = true;
+  try {
+    const up = Math.max(1, Math.min(4, 1200 / sw));
+    const base = document.createElement('canvas');
+    base.width = Math.round(sw * up); base.height = Math.round(sh * up);
+    const bg = base.getContext('2d'); bg.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, base.width, base.height);
+    const W = base.width, H = base.height, im = bg.getImageData(0, 0, W, H).data;
+    const gr = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) gr[i] = (im[i*4] * .299 + im[i*4+1] * .587 + im[i*4+2] * .114) | 0;
+    const th = otsuTh(gr);
+    // 줄 분리 (가로로 꽉 찬 선은 무시)
+    const rowDark = new Array(H).fill(0);
+    for (let y = 0; y < H; y++) { let n = 0; for (let x = 0; x < W; x++) if (gr[y * W + x] <= th) n++; rowDark[y] = n > W * 0.7 ? 0 : n; }
+    const minDark = Math.max(3, W * 0.008), maxGap = Math.max(4, H * 0.01), bands = [];
+    let s = -1, gap = 0;
+    for (let y = 0; y < H; y++) {
+      if (rowDark[y] >= minDark) { if (s < 0) s = y; gap = 0; }
+      else if (s >= 0 && ++gap > maxGap) { bands.push([s, y - gap]); s = -1; }
+    }
+    if (s >= 0) bands.push([s, H - 1]);
+    const w = await getWorker();
+    await w.setParameters({ tessedit_pageseg_mode: '7' });
+    const found = [];
+    for (const [by0, by1] of bands.filter(b => b[1] - b[0] >= Math.max(12, H * 0.03))) {
+      let bx0 = W, bx1 = 0;
+      for (let x = 0; x < W; x++) { let n = 0; for (let y = by0; y <= by1; y++) if (gr[y * W + x] <= th) n++; if (n >= 2) { if (x < bx0) bx0 = x; bx1 = x; } }
+      if (bx1 - bx0 < 60) continue;
+      const votes = {};
+      for (const [bl, dl] of [[0, 0], [1, 0], [1, -15], [1, 15], [2, 0], [2, -10], [2, 10], [0, null]]) {
+        const r = await w.recognize(mkVariant2(gr, W, bx0, by0, bx1, by1, bl, dl));
+        const txt = r.data.text.replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase();
+        if (!/^[A-Z0-9\-_.\/]{6,}$/.test(txt) || !/\d/.test(txt) || !/[A-Z]/.test(txt)) continue;
+        const v = votes[txt] || (votes[txt] = { n: 0, c: 0 }); v.n++; v.c += r.data.confidence;
+      }
+      const ents = Object.entries(votes);
+      if (ents.length) {                                  // 같은 길이끼리 글자 위치별 다수결
+        const byLen = {};
+        ents.forEach(([t, v]) => (byLen[t.length] = byLen[t.length] || []).push([t, v]));
+        const cnt = g => g.reduce((a, [, v]) => a + v.n, 0);
+        const grp = Object.values(byLen).sort((a, b) => cnt(b) - cnt(a))[0];
+        let text = '', agree = true;
+        for (let i = 0; i < grp[0][0].length; i++) {
+          const m = {};
+          grp.forEach(([t, v]) => m[t[i]] = (m[t[i]] || 0) + v.n * (1 + v.c / 100));
+          const keys = Object.keys(m); if (keys.length > 1) agree = false;
+          text += keys.sort((a, b) => m[b] - m[a])[0];
+        }
+        if (validCode(text)) found.push({ text, warn: !agree || cnt(grp) < 3 });
+      }
+    }
+    if (!found.length) { await w.setParameters({ tessedit_pageseg_mode: '6' }); return ocrRegionOld(sx, sy, sw, sh); }
+    finishPicks(found);
+  } catch (err) {
+    $('selMsg').textContent = '인식 실패: ' + err.message + ' (인터넷 연결 확인)';
+    $('selRead').disabled = false;
+  }
+}
+async function ocrRegionOld(sx, sy, sw, sh){
+  $('selMsg').textContent = '글자 인식 중... (처음에는 데이터 다운로드로 조금 걸립니다)';
+  $('selRead').disabled = true;
+  try {
+    const up = Math.max(1, Math.min(4, 900 / sw));   // 작은 영역은 확대
+    const c = document.createElement('canvas');
+    c.width = Math.round(sw * up); c.height = Math.round(sh * up);
+    const g = c.getContext('2d');
+    g.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    binarize(c);                                  // 흑백 이진화: 칸 선/배경 제거
+    const w = await getWorker();
+    const { data } = await w.recognize(c);
+    // 단어 단위로 보고, 바코드형 문자열만 통과: 8자 이상, 영문+숫자 혼합
+    let lines = (data.words || []).filter(x => x.confidence >= 30)
+      .map(x => x.text.replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase())
+      .filter(t => /^[A-Z0-9\-_.\/]{8,}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t));
+    // 다른 결과를 그대로 포함하면서 3글자 이하만 더 긴 것은 앞뒤 잡글자로 보고 제거
+    lines = lines.filter(t => !lines.some(o => o !== t && t.includes(o) && t.length - o.length <= 3));
+    let added = 0;
+    lines.forEach(t => { if (!picks.some(p => p.text === t)) { picks.push({ text: t, el: null }); added++; } });
+    if (!added) { $('selMsg').textContent = '새로 읽힌 항목이 없습니다. 영역을 다시 지정하세요.'; $('selRead').disabled = false; return; }
+    renderPick(); closeSel();
+    $('scanMsg').textContent = added + '개 추가됨. 틀린 글자는 눌러서 수정하세요. 다른 영역은 "영역 지정"으로 더 추가할 수 있습니다.';
+  } catch (err) {
+    $('selMsg').textContent = '인식 실패: ' + err.message + ' (인터넷 연결 확인)';
+    $('selRead').disabled = false;
+  }
+}
+function loadImage(file){
+  return new Promise((res, rej) => {
+    const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file);
+  });
+}
+function drawBoxes(lines, W, H){
+  const box = $('boxes'); box.innerHTML = '';
+  let n = 0;
+  lines.forEach(l => {
+    const t = (l.text || '').replace(/\s+/g, '').toUpperCase();
+    if (t.length < 6 || l.confidence < 30) return;
+    n++;
+    const b = l.bbox, d = document.createElement('div');
+    d.className = 'box';
+    d.style.left = b.x0 / W * 100 + '%'; d.style.top = b.y0 / H * 100 + '%';
+    d.style.width = (b.x1 - b.x0) / W * 100 + '%'; d.style.height = (b.y1 - b.y0) / H * 100 + '%';
+    d.onclick = () => {
+      const on = d.classList.toggle('sel');
+      if (on) picks.push({ text: t, el: d });
+      else picks = picks.filter(p => p.el !== d);
+      renderPick();
+    };
+    box.appendChild(d);
+  });
+  $('scanMsg').textContent = n ? `${n}개 항목 발견. 만들 것을 눌러 선택하세요.` : '글자를 찾지 못했습니다. 다시 찍거나 아래에서 직접 추가하세요.';
+  $('pick').style.display = 'block';
+}
+function addPick(t){ picks.push({ text: t, el: null }); renderPick(); }
+function renderPick(){
+  const L = $('pickList'); L.innerHTML = '';
+  picks.forEach((p, i) => {
+    const r = document.createElement('div'); r.className = 'row';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = p.text;
+    if (p.warn) inp.style.borderColor = '#f0a020';
+    inp.oninput = () => { p.text = inp.value; inp.style.borderColor = ''; };
+    const x = document.createElement('button'); x.className = 'btn sec sm'; x.style.flex = '0 0 44px'; x.textContent = '✕';
+    x.onclick = () => { if (p.el) p.el.classList.remove('sel'); picks.splice(i, 1); renderPick(); };
+    r.append(inp, x); L.appendChild(r);
+  });
+  $('pick').style.display = (picks.length || srcCanvas) ? 'block' : 'none';
+}
+function makeFromPick(){
+  const items = picks.map(p => p.text.trim()).filter(Boolean).map(t => ({ text: t, type: $('scanType').value }));
+  if (!items.length) return alert('선택된 항목이 없습니다.');
+  openBatch(items);
+}
+function makeFromManual(){
+  const items = $('manText').value.split('\n').map(s => s.trim()).filter(Boolean).map(t => ({ text: t, type: $('manType').value }));
+  if (!items.length) return alert('내용을 입력하세요.');
+  openBatch(items);
+}
+
+// ---------- 결과 / 슬라이드 ----------
+function openBatch(items){
+  current = { id: Date.now(), time: new Date().toLocaleString('ko-KR'), items };
+  persist(current);
+  renderSlides(); show('result');
+}
+function renderSlides(){
+  const S = $('slides'); S.innerHTML = '';
+  $('resTitle').textContent = current.time + ' · ' + current.items.length + '장 (좌우로 넘기기, 내용은 수정 가능)';
+  current.items.forEach((it, i) => {
+    const s = document.createElement('div'); s.className = 'slide';
+    const bc = document.createElement('div'); bc.className = 'bc';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = it.text;
+    const sel = document.createElement('select');
+    ['QR', 'CODE128', 'CODE39'].forEach(t => { const o = document.createElement('option'); o.textContent = t; sel.appendChild(o); });
+    sel.value = it.type;
+    const err = document.createElement('div'); err.className = 'err';
+    const redraw = () => { draw(bc, err, it); persist(current); };
+    inp.oninput = () => { it.text = inp.value; redraw(); };
+    sel.onchange = () => { it.type = sel.value; redraw(); };
+    const r = document.createElement('div'); r.className = 'row';
+    const del = document.createElement('button'); del.className = 'btn sec sm'; del.textContent = '삭제';
+    del.onclick = () => { current.items.splice(i, 1); persist(current); current.items.length ? renderSlides() : show('hist'); };
+    const sv = document.createElement('button'); sv.className = 'btn sm'; sv.textContent = '이미지 저장';
+    sv.onclick = () => saveImg(bc, it);
+    r.append(sel, sv, del);
+    s.append(bc, err, inp, r); S.appendChild(s);
+    redraw();
+  });
+  S.onscroll = updCnt; updCnt();
+}
+function updCnt(){
+  const S = $('slides'), n = current.items.length;
+  const i = Math.min(n, Math.round(S.scrollLeft / (S.clientWidth + 12)) + 1);
+  $('cnt').textContent = n ? i + ' / ' + n : '';
+}
+function draw(host, err, it){
+  host.innerHTML = ''; err.textContent = '';
+  if (!it.text) return;
+  try {
+    if (it.type === 'QR') {
+      const q = qrcode(0, 'M'); q.addData(it.text); q.make();
+      const im = document.createElement('img'); im.src = q.createDataURL(8, 4); im.style.width = '70%'; host.appendChild(im);
+      const t = document.createElement('div'); t.textContent = it.text; t.style.cssText = 'color:#000;font:bold 18px Consolas,monospace'; host.appendChild(t);
+    } else {
+      const c = document.createElement('canvas');
+      const txt = it.type === 'CODE39' ? it.text.toUpperCase() : it.text;
+      JsBarcode(c, txt, { format: it.type, width: 3, height: 130, displayValue: true, fontSize: 22, margin: 12 });
+      host.appendChild(c);
+    }
+  } catch (e) { err.textContent = '이 종류로 만들 수 없는 문자가 있습니다. 종류를 바꿔보세요.'; }
+}
+async function saveImg(host, it){
+  const el = host.querySelector('canvas') || host.querySelector('img'); if (!el) return;
+  const c = document.createElement('canvas');
+  const w = el.naturalWidth || el.width, h = el.naturalHeight || el.height;
+  c.width = w + 40; c.height = h + 40;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(el, 20, 20, w, h);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  const file = new File([blob], it.text + '.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch(e){ if (e.name === 'AbortError') return; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = it.text + '.png'; a.click();
+}
+
+// ---------- 히스토리 ----------
+function renderHist(){
+  const L = $('histList'); L.innerHTML = '';
+  const h = loadHist();
+  if (!h.length) { L.innerHTML = '<div class="msg">아직 기록이 없습니다.</div>'; return; }
+  h.forEach(b => {
+    const d = document.createElement('div'); d.className = 'hist';
+    d.innerHTML = '<b>' + b.items.length + '장</b> <small>' + b.time + '</small><br><small>' +
+      b.items.map(x => x.text).join(' · ').replace(/</g, '&lt;') + '</small>';
+    d.onclick = () => { current = b; renderSlides(); show('result'); };
+    const x = document.createElement('button'); x.className = 'btn sec sm'; x.textContent = '삭제'; x.style.marginTop = '8px';
+    x.onclick = ev => { ev.stopPropagation(); if (confirm('이 묶음을 삭제할까요?')) { saveHist(loadHist().filter(z => z.id !== b.id)); renderHist(); } };
+    d.appendChild(x);
+    L.appendChild(d);
+  });
+}
+function clearHist(){ if (confirm('히스토리를 모두 삭제할까요?')) { saveHist([]); renderHist(); } }
+</script>
+</body>
+</html>
