@@ -45,6 +45,8 @@ input[type=text],select{width:100%;background:var(--card);border:1px solid var(-
 .hist{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0}
 .hist small{color:var(--mut)}
 .err{color:#ff7b72;font-size:13px}
+.item .bc{background:#fff;border-radius:8px;padding:8px;text-align:center;margin-bottom:6px}
+.item .bc canvas,.item .bc img{max-width:100%;height:auto}
 #sel{display:none;position:fixed;inset:0;z-index:50;background:#000;flex-direction:column;touch-action:none}
 #sel.on{display:flex}
 #selStage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
@@ -324,21 +326,30 @@ function stopScan(){
 }
 function onScan(t){
   if (!t || scans.some(s => s.text === t)) return;
-  scans.push({ text: t }); if (navigator.vibrate) navigator.vibrate(60);
+  scans.push({ text: t, type: $('scType').value }); if (navigator.vibrate) navigator.vibrate(60);
   renderScans();
 }
 function renderScans(){
   const L = $('scList'); L.innerHTML = '';
   scans.forEach((p, i) => {
-    const r = document.createElement('div'); r.className = 'row';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.value = p.text; inp.oninput = () => p.text = inp.value;
-    const x = document.createElement('button'); x.className = 'btn sec sm'; x.style.flex = '0 0 44px'; x.textContent = '✕';
+    const card = document.createElement('div'); card.className = 'item';
+    const bc = document.createElement('div'); bc.className = 'bc';
+    const err = document.createElement('div'); err.className = 'err';
+    const redraw = () => draw(bc, err, p);
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = p.text;
+    inp.oninput = () => { p.text = inp.value; redraw(); };
+    const sel = document.createElement('select');
+    ['QR', 'CODE128', 'CODE39'].forEach(t => { const o = document.createElement('option'); o.textContent = t; sel.appendChild(o); });
+    sel.value = p.type; sel.onchange = () => { p.type = sel.value; redraw(); };
+    const x = document.createElement('button'); x.className = 'btn sec sm'; x.textContent = '삭제';
     x.onclick = () => { scans.splice(i, 1); renderScans(); };
-    r.append(inp, x); L.appendChild(r);
+    const r = document.createElement('div'); r.className = 'row'; r.append(sel, x);
+    card.append(bc, err, inp, r); L.appendChild(card);
+    redraw();
   });
 }
 function makeFromScans(){
-  const items = scans.map(p => p.text.trim()).filter(Boolean).map(t => ({ text: t, type: $('scType').value }));
+  const items = scans.filter(p => p.text.trim()).map(p => ({ text: p.text.trim(), type: p.type }));
   if (!items.length) return alert('읽은 코드가 없습니다.');
   stopScan(); openBatch(items);
 }
