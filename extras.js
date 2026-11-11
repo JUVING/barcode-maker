@@ -47,10 +47,11 @@ window.applyRef = (items, src) => {                         // 읽은 결과에 
   return items.map(i => {
     const n = ctlNorm(i.text), miss = [];
     const base = lines.length ? matchRef(i.text, r) === true : true;
-    for (const g of groups) if (g.some(t => n.includes(t))) {                 // 그룹 안 코드가 하나라도 있으면 나머지도 (몇 개든) 있어야 정상
+    const hit = groups.filter(g => g.some(t => n.includes(t))), unk = groups.length > 0 && !hit.length;       // 규칙에 없는 코드는 무조건 불일치
+    for (const g of hit) {                 // 그룹 안 코드가 하나라도 있으면 나머지도 (몇 개든) 있어야 정상
       g.forEach(t => { if (!all.some(a => a.includes(t)) && !miss.includes(t)) miss.push(t); });
     }
-    return Object.assign({}, i, { ok: base && !miss.length }, miss.length ? { miss } : {});
+    return Object.assign({}, i, { ok: base && !miss.length && !unk }, miss.length ? { miss } : {}, unk ? { unk: true } : {});
   });
 };
 window.refForNative = () => {
@@ -88,7 +89,8 @@ function renderCheck(){
   if (it.ok === undefined) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden'); box.classList.toggle('bad', it.ok === false);
   const r = getRef(), lines = refLines(r);
-  const kids = [h('b', {}, it.ok ? '검사 통과' : (it.miss && it.miss.length ? '이종 검사 불일치' : '기준값과 불일치'))];
+  const kids = [h('b', {}, it.ok ? '검사 통과' : (it.miss && it.miss.length || it.unk ? '이종 검사 불일치' : '기준값과 불일치'))];
+  if (it.unk) kids.push(h('div', { class: 'cs' }, '이종 검사 규칙에 없는 코드'));
   if (it.miss && it.miss.length) kids.push(h('div', { class: 'cs' }, '같이 읽혀야 하는 코드 없음: ' + it.miss.join(', ')));
   if (it.ok === false && lines.length) kids.push(h('div', { class: 'cs' }, '기준: ' + lines.slice(0, 3).join(' / ') + (lines.length > 3 ? ' …' : '')));
   box.replaceChildren(...kids);
