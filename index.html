@@ -137,7 +137,19 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 .vcode img,.vcode canvas{max-width:100%;height:auto}
 .vinfo{flex:1;min-height:0;overflow-y:auto;padding:8px 20px 4px}
 .vkind{font-size:19px;font-weight:800;margin:6px 0 10px}
-.vraw{font-size:15.5px;line-height:1.55;word-break:break-all;user-select:text;color:var(--fg)}
+.vraw{font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:16px;line-height:1.35;word-break:break-all;color:var(--fg);touch-action:none;-webkit-user-select:none;user-select:none}
+.vraw .ch{position:relative;display:inline-block;padding:1px 0 14px;min-width:.62em;text-align:center;border-radius:3px}
+.vraw .ch[data-n]::after{content:attr(data-n);position:absolute;left:50%;bottom:1px;transform:translateX(-50%);font-size:9px;font-weight:700;color:var(--mut);font-family:-apple-system,'Malgun Gothic',sans-serif}
+.vraw .ch.sel{background:var(--acc);color:#fff}
+.vraw .ch.sel::after{color:#fff}
+.vraw .ch.sel .ctl{background:rgba(255,255,255,.28);color:#fff}
+.selinfo{margin-top:10px;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:12px}
+.selinfo .t{font-size:12.5px;color:var(--mut);font-weight:700;margin-bottom:6px}
+.selinfo .v{font-family:ui-monospace,Consolas,monospace;font-size:15px;font-weight:700;word-break:break-all;margin-bottom:8px}
+.selinfo .nums{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.selinfo .nums span{background:var(--accbg);color:var(--acc);border-radius:9px;padding:4px 9px;font-size:13px;font-weight:800}
+.selinfo code{display:block;background:var(--surface2);border-radius:9px;padding:8px 10px;font-size:14px;font-weight:700;margin-bottom:6px;word-break:break-all}
+.selinfo .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .vraw .ctl,.item .txt .ctl{display:inline-block;font-size:11px;font-weight:800;color:var(--acc);background:var(--accbg);border-radius:4px;padding:0 3px;margin:0 1px;vertical-align:2px;line-height:15px}
 .vmeta{font-size:13px;color:var(--mut);margin-top:12px}
 .vpanel{background:var(--surface);padding:10px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
@@ -247,6 +259,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
     <div class="vkind" id="vKind"></div>
     <div class="vraw" id="vRaw"></div>
     <div class="vmeta" id="vMeta"></div>
+    <div class="selinfo" id="vSel"></div>
   </div>
   <div class="vpanel">
     <input type="text" id="vText" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="내용 수정">
@@ -442,13 +455,80 @@ function syncViewer(){
   const n = V.batch.items.length, it = cur();
   $('vTitle').textContent = n > 1 ? `상세 보기  ${V.idx + 1} / ${n}` : '상세 보기';
   $('vKind').textContent = KIND[it.type] || it.type;
-  $('vRaw').replaceChildren(it.text ? CTL_TXT(it.text) : '(비어 있음)');
+  renderRaw(it.text);
   const src = it.fmt && FMT[it.fmt] ? '읽은 종류 ' + FMT[it.fmt][1] : '직접 만든 코드';
   $('vMeta').textContent = `${src} · 길이 ${[...it.text].length}자`;
   if (document.activeElement !== $('vText')) $('vText').value = it.text;
   vSeg.set(it.type);
   $('vDots').replaceChildren(...(n > 1 && n <= 12 ? V.batch.items.map((_, i) => h('i', { class: i === V.idx ? 'on' : '' })) : []));
 }
+/* ----- 글자 선택: 위치/길이 보기 (Mid 함수용, 1부터 시작) ----- */
+const SEL = { chars: [], a: -1, b: -1, drag: false, anchor: -1, last: 0, lastIdx: -1 };
+function renderRaw(text){
+  const box = $('vRaw'); SEL.chars = Array.from(text || ''); SEL.a = SEL.b = -1;
+  if (!SEL.chars.length) { box.replaceChildren('(비어 있음)'); showSel(); return; }
+  box.replaceChildren(...SEL.chars.map((ch, i) => {
+    const c = ch.codePointAt(0), isCtl = c < 32 || c === 127;
+    const el = h('span', { class: 'ch', 'data-i': i }, isCtl ? h('span', { class: 'ctl' }, String.fromCharCode(c === 127 ? 0x2421 : 0x2400 + c)) : ch);
+    if ((i + 1) % 5 === 0) el.setAttribute('data-n', i + 1);
+    return el;
+  }));
+  showSel();
+}
+function selToken(i){                       // 구분 문자(제어문자/공백) 사이의 한 덩어리
+  const sep = k => { const c = SEL.chars[k].codePointAt(0); return c < 32 || c === 127 || SEL.chars[k] === ' '; };
+  if (sep(i)) return [i, i];
+  let a = i, b = i;
+  while (a > 0 && !sep(a - 1)) a--;
+  while (b < SEL.chars.length - 1 && !sep(b + 1)) b++;
+  return [a, b];
+}
+function showSel(){
+  const box = $('vSel'), n = SEL.chars.length;
+  box.replaceChildren();
+  document.querySelectorAll('#vRaw .ch.sel').forEach(e => e.classList.remove('sel'));
+  if (SEL.a < 0) {
+    box.append(h('div', { class: 't' }, n ? `전체 ${n}자 · 글자를 누르거나 드래그하면 위치와 길이를 알려 줘요 (두 번 누르면 한 덩어리 선택)` : ''));
+    return;
+  }
+  const lo = Math.min(SEL.a, SEL.b), hi = Math.max(SEL.a, SEL.b), len = hi - lo + 1, start = lo + 1, end = hi + 1;
+  const kids = $('vRaw').children;
+  for (let i = lo; i <= hi; i++) if (kids[i]) kids[i].classList.add('sel');
+  const picked = SEL.chars.slice(lo, hi + 1).join('');
+  box.append(
+    h('div', { class: 't' }, '선택한 글자'),
+    h('div', { class: 'v' }, CTL_TXT(picked)),
+    h('div', { class: 'nums' }, h('span', {}, `시작 위치 ${start}`), h('span', {}, `끝 위치 ${end}`), h('span', {}, `길이 ${len}`), h('span', {}, `전체 ${n}자`)),
+    h('code', {}, `Mid(값, ${start}, ${len})`),
+    h('code', {}, `C#  값.Substring(${lo}, ${len})   (0부터 시작)`),
+    h('div', { class: 'btns' },
+      h('button', { class: 'chipbtn', onclick: () => copyText(`Mid(값, ${start}, ${len})`) }, 'Mid 복사'),
+      h('button', { class: 'chipbtn', onclick: () => copyText(`${start}, ${len}`) }, '숫자만 복사'),
+      h('button', { class: 'chipbtn', onclick: () => copyText(picked) }, '선택 글자 복사'),
+      h('button', { class: 'chipbtn', onclick: () => { SEL.a = SEL.b = -1; showSel(); } }, '선택 해제')));
+}
+(function(){
+  const box = $('vRaw');
+  const idxAt = (x, y) => { const t = document.elementFromPoint(x, y), el = t && t.closest ? t.closest('#vRaw .ch') : null; return el ? +el.dataset.i : -1; };
+  box.addEventListener('pointerdown', e => {
+    const i = idxAt(e.clientX, e.clientY); if (i < 0) return;
+    const now = Date.now();
+    if (now - SEL.last < 380 && SEL.lastIdx === i) {                       // 두 번 누르기: 한 덩어리 선택
+      const [a, b] = selToken(i); SEL.a = a; SEL.b = b; showSel(); SEL.last = 0; return;
+    }
+    SEL.last = now; SEL.lastIdx = i; SEL.drag = true; SEL.anchor = i; SEL.a = SEL.b = i;
+    try { box.setPointerCapture(e.pointerId); } catch(_){}
+    showSel();
+  });
+  box.addEventListener('pointermove', e => {
+    if (!SEL.drag) return;
+    const i = idxAt(e.clientX, e.clientY); if (i < 0 || i === SEL.b) return;
+    SEL.b = i; showSel();
+  });
+  const end = () => { SEL.drag = false; };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+})();
+
 $('vSlides').addEventListener('scroll', debounce(() => {
   if (!V.batch) return;
   const i = Math.max(0, Math.min(V.batch.items.length - 1, Math.round($('vSlides').scrollLeft / $('vSlides').clientWidth)));
