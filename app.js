@@ -187,16 +187,24 @@ function syncViewer(){
 }
 /* ----- 글자 선택: 위치/길이 보기 (Mid 함수용, 1부터 시작) ----- */
 const SEL = { chars: [], a: -1, b: -1, drag: false, anchor: -1, last: 0, lastIdx: -1 };
+function getBase(){ try { return localStorage.getItem('bc_base') === '1' ? 1 : 0; } catch(e){ return 0; } }   // 기본: 0부터
+function setBase(v){ try { localStorage.setItem('bc_base', String(v)); } catch(e){} }
+function updTicks(){                                           // 5자리마다 번호 눈금 (기준에 맞게)
+  const base = getBase();
+  [...$('vRaw').children].forEach((el, i) => {
+    const n = i + base;
+    if (n % 5 === 0 && n > 0 || (base === 0 && i === 0)) el.setAttribute('data-n', n); else el.removeAttribute('data-n');
+  });
+}
 function renderRaw(text){
   const box = $('vRaw'); SEL.chars = Array.from(text || ''); SEL.a = SEL.b = -1;
   if (!SEL.chars.length) { box.replaceChildren('(비어 있음)'); showSel(); return; }
   box.replaceChildren(...SEL.chars.map((ch, i) => {
     const c = ch.codePointAt(0), isCtl = c < 32 || c === 127;
     const el = h('span', { class: 'ch', 'data-i': i }, isCtl ? h('span', { class: 'ctl' }, String.fromCharCode(c === 127 ? 0x2421 : 0x2400 + c)) : ch);
-    if ((i + 1) % 5 === 0) el.setAttribute('data-n', i + 1);
     return el;
   }));
-  showSel();
+  updTicks(); showSel();
 }
 function selToken(i){                       // 구분 문자(제어문자/공백) 사이의 한 덩어리
   const sep = k => { const c = SEL.chars[k].codePointAt(0); return c < 32 || c === 127 || SEL.chars[k] === ' '; };
@@ -206,26 +214,30 @@ function selToken(i){                       // 구분 문자(제어문자/공백
   while (b < SEL.chars.length - 1 && !sep(b + 1)) b++;
   return [a, b];
 }
+function baseBar(){
+  const base = getBase();
+  const mk = (v, label) => h('button', { type: 'button', class: base === v ? 'on' : '', onclick: () => { setBase(v); updTicks(); showSel(); } }, label);
+  return h('div', { class: 'basebar' }, h('span', {}, '위치 기준'), h('div', { class: 'seg' }, mk(0, '0부터'), mk(1, '1부터')));
+}
 function showSel(){
-  const box = $('vSel'), n = SEL.chars.length;
+  const box = $('vSel'), n = SEL.chars.length, base = getBase();
   box.replaceChildren();
   document.querySelectorAll('#vRaw .ch.sel').forEach(e => e.classList.remove('sel'));
   if (SEL.a < 0) {
-    box.append(h('div', { class: 't' }, n ? `전체 ${n}자 · 글자를 누르거나 드래그하면 위치와 길이를 알려 줘요 (두 번 누르면 한 덩어리 선택)` : ''));
+    box.append(baseBar(), h('div', { class: 't', style: 'margin-top:8px' }, n ? `전체 ${n}자 · 글자를 누르거나 드래그하면 위치와 길이를 알려 줘요 (두 번 누르면 한 덩어리 선택)` : ''));
     return;
   }
-  const lo = Math.min(SEL.a, SEL.b), hi = Math.max(SEL.a, SEL.b), len = hi - lo + 1, start = lo + 1, end = hi + 1;
+  const lo = Math.min(SEL.a, SEL.b), hi = Math.max(SEL.a, SEL.b), len = hi - lo + 1;
+  const start = lo + base, end = hi + base;                      // 화면에 보이는 위치 (기준에 따라 0부터 또는 1부터)
   const kids = $('vRaw').children;
   for (let i = lo; i <= hi; i++) if (kids[i]) kids[i].classList.add('sel');
   const picked = SEL.chars.slice(lo, hi + 1).join('');
   box.append(
-    h('div', { class: 't' }, '선택한 글자'),
+    baseBar(),
+    h('div', { class: 't', style: 'margin-top:10px' }, '선택한 글자'),
     h('div', { class: 'v' }, CTL_TXT(picked)),
     h('div', { class: 'nums' }, h('span', {}, `시작 위치 ${start}`), h('span', {}, `끝 위치 ${end}`), h('span', {}, `길이 ${len}`), h('span', {}, `전체 ${n}자`)),
-    h('code', {}, `Mid(값, ${start}, ${len})`),
-    h('code', {}, `C#  값.Substring(${lo}, ${len})   (0부터 시작)`),
     h('div', { class: 'btns' },
-      h('button', { class: 'chipbtn', onclick: () => copyText(`Mid(값, ${start}, ${len})`) }, 'Mid 복사'),
       h('button', { class: 'chipbtn', onclick: () => copyText(`${start}, ${len}`) }, '숫자만 복사'),
       h('button', { class: 'chipbtn', onclick: () => copyText(picked) }, '선택 글자 복사'),
       h('button', { class: 'chipbtn', onclick: () => { SEL.a = SEL.b = -1; showSel(); } }, '선택 해제')));
@@ -329,7 +341,17 @@ $('histClear').onclick = async () => { if (await ask('히스토리를 모두 삭
 /* ===== ① 스캔 (카메라로 바코드/QR 읽기) ===== */
 const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } };   // 작은 QR도 읽도록 고해상도
 let scStream = null, scTimer = null, scReader = null, scBusy = false;
-$('scBtn').onclick = () => { if (NATIVE) return AndroidBridge.scanLive(); if (scBusy) return; (scStream || scReader) ? stopScan(true) : startScan(); };
+$('scBtn').onclick = () => { if (NATIVE) return startNativeScan(); if (scBusy) return; (scStream || scReader) ? stopScan(true) : startScan(); };
+const SCAN_DELAYS = [[0, '없음'], [500, '0.5초'], [1000, '1초'], [2000, '2초'], [3000, '3초']];
+function scanOpts(){
+  try { const o = JSON.parse(localStorage.getItem('bc_scan_opts') || '{}'); return { delay: SCAN_DELAYS.some(d => d[0] === o.delay) ? o.delay : 1000, rearm: !!o.rearm }; }
+  catch(e){ return { delay: 1000, rearm: false }; }
+}
+function saveScanOpts(o){ try { localStorage.setItem('bc_scan_opts', JSON.stringify(o)); } catch(e){} }
+function startNativeScan(){
+  const o = JSON.stringify(scanOpts());
+  if (AndroidBridge.scanLive2) AndroidBridge.scanLive2(o); else AndroidBridge.scanLive();     // 옛 앱 호환
+}
 const webScan = new Map();                                       // 웹 버전 실시간 스캔: 끄면 한꺼번에 결과로 보여 줌
 function onScan(t, f){ if (t && !webScan.has(t)) { webScan.clear(); webScan.set(t, f); haptic(); $('scBtn').textContent = '실시간 스캔 끄기 (읽음)'; } }
 function finishWebScan(){ const items = [...webScan].map(([text, fmt]) => ({ text, fmt })); webScan.clear(); if (items.length) showResults(items, '스캔'); }
@@ -676,6 +698,10 @@ function renderSettings(){
   $('setVer').textContent = info ? `앱 ${info.apk} · 화면 v${info.ui} (${info.source})` : '웹 버전';
   $('updBox').classList.toggle('hidden', !info);
   $('setResetUi').classList.toggle('hidden', !info);
+  $('scanSetBox').classList.toggle('hidden', !info);
+  const o = scanOpts();
+  $('setDelay').replaceChildren(...SCAN_DELAYS.map(([ms, label]) => h('button', { type: 'button', 'data-ms': ms, class: ms === o.delay ? 'on' : '' }, label)));
+  $('setRearm').setAttribute('aria-checked', o.rearm ? 'true' : 'false');
   $('updMsg').textContent = '필요할 때만 확인해요. 서명이 확인된 업데이트만 적용돼요.';
   $('updApply').classList.add('hidden'); $('updCheck').disabled = false;
 }
@@ -691,6 +717,12 @@ window.__updateStatus = json => {
   else if (o.state === 'needApk') msg.textContent = '이 업데이트는 앱 설치 파일(APK)을 새로 설치해야 해요.';
   else msg.textContent = '업데이트하지 못했어요: ' + (o.error || '알 수 없는 오류');
 };
+$('setDelay').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const o = scanOpts(); o.delay = +b.dataset.ms; saveScanOpts(o);
+  $('setDelay').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+};
+$('setRearm').onclick = () => { const o = scanOpts(); o.rearm = !o.rearm; saveScanOpts(o); $('setRearm').setAttribute('aria-checked', o.rearm ? 'true' : 'false'); };
 $('setBtn').onclick = () => { renderSettings(); openOverlay('settings'); };
 $('setX').onclick = closeOverlay;
 $('updCheck').onclick = () => { if (!UPD.busy) { window.__updateStatus('{"state":"checking"}'); AndroidBridge.checkUpdate(); } };
