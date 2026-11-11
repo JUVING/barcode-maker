@@ -155,7 +155,9 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 <section id="v-live" class="view on">
   <div class="card">
     <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="frame"></div><div class="camhint">바코드나 QR을 네모 안에 맞추면<br>자동으로 읽어서 목록에 추가합니다</div></div>
+    <div class="row hidden" id="camTools" style="margin-bottom:8px"><button class="btn sm" id="torchBtn">조명 켜기</button><button class="btn sm" id="afBtn">자동 초점</button></div>
     <input id="zoom" type="range" class="hidden">
+    <input id="focus" type="range" class="hidden" aria-label="초점 거리">
     <button id="scBtn" class="btn primary block">카메라 시작</button>
   </div>
   <div class="sec-title">읽은 코드 <span class="badge" id="liveCount">0</span><span class="sp"></span><button class="link" id="liveClear">모두 지우기</button></div>
@@ -470,7 +472,7 @@ $('histClear').onclick = async () => { if (await ask('히스토리를 모두 삭
 const live = ItemList($('liveList'), $('liveCount'), $('liveMake'), items => openViewer(newBatch(items)));
 const liveSeg = makeSeg($('liveSeg'), 'QR', t => live.setType(t));
 $('liveClear').onclick = () => live.clear();
-const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };
+const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } };   // 작은 QR도 읽도록 고해상도
 let scStream = null, scTimer = null, scReader = null, scBusy = false;
 $('scBtn').onclick = () => { if (scBusy) return; (scStream || scReader) ? stopScan() : startScan(); };
 function onScan(t, f){ if (live.add(t, false, f)) haptic(); }
@@ -489,7 +491,6 @@ async function startScan(){
       scReader = new ZXing.BrowserMultiFormatReader();
       await scReader.decodeFromConstraints({ video: HQ }, v, r => { if (r) onScan(r.getText(), (ZXing.BarcodeFormat[r.getBarcodeFormat()] || '').toString()); });
     } else throw new Error('스캔 엔진을 불러오지 못했어요. 인터넷을 확인해 주세요');
-    console.log('DIAG BD=' + !!det + ' ZX=' + !!window.ZXing);
     $('camwrap').classList.add('on'); $('scBtn').textContent = '카메라 끄기';
     setTimeout(tuneCam, 600);
   } catch (e) {
@@ -499,14 +500,27 @@ async function startScan(){
 }
 async function tuneCam(){
   try {
-    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) { console.log('DIAG no getCapabilities'); return; }
-    const caps = tr.getCapabilities();
-    console.log('DIAG caps=' + JSON.stringify(caps) + ' settings=' + JSON.stringify(tr.getSettings()));
-    if (caps.focusMode && caps.focusMode.includes('continuous')) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) return;
+    const caps = tr.getCapabilities(), apply = c => tr.applyConstraints({ advanced: [c] }).catch(() => {});
+    apply({ focusMode: 'continuous' });
+    const tools = [];
+    if (caps.torch) {
+      let on = false; const tb = $('torchBtn'); tb.classList.remove('hidden'); tb.textContent = '조명 켜기';
+      tb.onclick = () => { on = !on; apply({ torch: on }); tb.textContent = on ? '조명 끄기' : '조명 켜기'; }; tools.push(1);
+    } else $('torchBtn').classList.add('hidden');
+    const f = $('focus');
+    if (caps.focusDistance) {
+      f.min = caps.focusDistance.min; f.max = caps.focusDistance.max; f.step = caps.focusDistance.step || 0.01;
+      f.value = (tr.getSettings().focusDistance) || caps.focusDistance.min;
+      f.classList.remove('hidden');
+      f.oninput = () => apply({ focusMode: 'manual', focusDistance: parseFloat(f.value) });
+      $('afBtn').classList.remove('hidden'); $('afBtn').onclick = () => { apply({ focusMode: 'continuous' }); toast('자동 초점으로 되돌렸어요'); }; tools.push(1);
+    } else { f.classList.add('hidden'); $('afBtn').classList.add('hidden'); }
+    $('camTools').classList.toggle('hidden', !tools.length);
     const z = $('zoom');
     if (caps.zoom) {
       z.min = caps.zoom.min; z.max = caps.zoom.max; z.step = caps.zoom.step || 0.1; z.value = caps.zoom.min; z.classList.remove('hidden');
-      z.oninput = () => tr.applyConstraints({ advanced: [{ zoom: parseFloat(z.value) }] }).catch(() => {});
+      z.oninput = () => apply({ zoom: parseFloat(z.value) });
     }
   } catch(e){}
 }
@@ -514,7 +528,7 @@ function stopScan(){
   clearInterval(scTimer); scTimer = null;
   if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
   if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
-  $('zoom').classList.add('hidden'); $('camwrap').classList.remove('on');
+  $('zoom').classList.add('hidden'); $('focus').classList.add('hidden'); $('camTools').classList.add('hidden'); $('camwrap').classList.remove('on');
   const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = '카메라 시작';
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopScan(); });
