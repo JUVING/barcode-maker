@@ -37,7 +37,7 @@ h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.3px}
 #sub{margin:2px 0 0;font-size:12.5px;color:var(--mut)}
 main{flex:1;min-height:0;overflow:hidden;padding:4px 16px 10px;display:flex;flex-direction:column}
 .view{display:none}.view.on{display:flex;flex-direction:column;flex:1;min-height:0}
-#liveList,#ocrList,#histList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#liveList,#ocrList,#histList,#manList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
 nav#tabs{display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
@@ -74,12 +74,13 @@ input[type=text],textarea{width:100%;border:1.5px solid var(--line);background:v
   font-family:ui-monospace,"SF Mono",Consolas,monospace;outline:none;transition:border-color .15s}
 input[type=text]:focus,textarea:focus{border-color:var(--acc)}
 textarea{resize:none;min-height:100px;line-height:1.5}
-#v-manual .card{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0}
-#manText{flex:1}
 input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 
 /* 항목 카드 */
-.item{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:10px;margin:8px 0;border:1.5px solid transparent}
+.item{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:10px;margin:8px 0;border:1.5px solid transparent;cursor:pointer}
+.item:active{transform:scale(.985)}
+.item .txt{font-family:ui-monospace,Consolas,monospace;font-size:14px;font-weight:700;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}
+.item .sub{font-size:11.5px;color:var(--mut);margin-top:4px}
 .item.warn{border-color:var(--warn);background:var(--warnbg)}
 .thumb{width:84px;height:84px;flex:none;background:#fff;border-radius:10px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
 .thumb img,.thumb canvas{max-width:100%;max-height:100%}
@@ -124,13 +125,22 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 .selBar{display:flex;gap:10px;padding:6px 14px calc(14px + env(safe-area-inset-bottom))}
 .selBar .btn{flex:1}
 
-#vSlides{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;min-height:0;scrollbar-width:none}
+#viewer{background:var(--bg)}
+.vbar{padding-bottom:10px;border-bottom:1px solid var(--line);background:var(--surface)}
+.vbar .ttl{text-align:left;font-size:17px;padding-left:4px}
+.chipbtn{border:1px solid var(--line);background:var(--surface2);color:var(--fg);font-weight:800;font-size:13px;border-radius:10px;padding:9px 12px;flex:none}
+.chipbtn:active{transform:scale(.96)}
+#vSlides{flex:none;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 #vSlides::-webkit-scrollbar{display:none}
-.vslide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 20px;gap:14px}
-.vcode{background:#fff;border-radius:22px;padding:20px;box-shadow:var(--shadow);max-width:100%;display:grid;place-items:center;min-width:240px;min-height:240px}
+.vslide{flex:0 0 100%;scroll-snap-align:center;display:flex;justify-content:center;padding:16px 16px 6px}
+.vcode{background:#fff;border-radius:10px;padding:16px;box-shadow:var(--shadow);width:100%;max-width:440px;display:grid;place-items:center;min-height:200px}
 .vcode img,.vcode canvas{max-width:100%;height:auto}
-.vlabel{font-family:ui-monospace,Consolas,monospace;font-weight:700;font-size:17px;word-break:break-all;text-align:center;color:var(--fg)}
-.vpanel{background:var(--surface);border-radius:24px 24px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(15,23,42,.08);display:flex;flex-direction:column;gap:10px}
+.vinfo{flex:1;min-height:0;overflow-y:auto;padding:8px 20px 4px}
+.vkind{font-size:19px;font-weight:800;margin:6px 0 10px}
+.vraw{font-size:15.5px;line-height:1.55;word-break:break-all;user-select:text;color:var(--fg)}
+.vraw .ctl,.item .txt .ctl{display:inline-block;font-size:11px;font-weight:800;color:var(--acc);background:var(--accbg);border-radius:4px;padding:0 3px;margin:0 1px;vertical-align:2px;line-height:15px}
+.vmeta{font-size:13px;color:var(--mut);margin-top:12px}
+.vpanel{background:var(--surface);padding:10px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
 .dots{display:flex;gap:6px;justify-content:center;min-height:8px}
 .dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--acc);width:18px;border-radius:4px}
 
@@ -170,7 +180,6 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
   </div>
   <div class="sec-title">읽은 코드 <span class="badge" id="liveCount">0</span><span class="sp"></span><button class="link" id="liveClear">모두 지우기</button></div>
   <div id="liveList"></div>
-  <div class="actionbar"><div class="seg" id="liveSeg"></div><button class="btn primary block" id="liveMake">바코드 만들기</button></div>
 </section>
 
 <!-- 사진 인식 -->
@@ -186,20 +195,19 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
   <div class="row hidden" id="ocrAgain"><button class="btn" id="ocrRe">영역 다시 지정</button><button class="btn" id="ocrNew">새 사진</button></div>
   <div class="sec-title">읽은 항목 <span class="badge" id="ocrCount">0</span><span class="sp"></span><button class="link" id="ocrAdd">+ 직접 추가</button><button class="link" id="ocrClear">모두 지우기</button></div>
   <div id="ocrList"></div>
-  <div class="actionbar"><div class="seg" id="ocrSeg"></div><button class="btn primary block" id="ocrMake">바코드 만들기</button></div>
 </section>
 
 <!-- 직접 입력 -->
 <section id="v-manual" class="view">
-  <div class="card">
+  <div class="card" style="flex:none">
     <p class="hint" style="margin-top:0"><b>구글 AI 사용법</b> — 카메라로 찍기 → 홈 버튼 꾹 눌러 글자 복사 → 붙여넣기</p>
-    <div class="row" style="margin-bottom:10px"><button class="btn" id="mCam">카메라 켜기</button><button class="btn" id="mPaste">붙여넣기</button></div>
+    <div class="row"><button class="btn" id="mCam">카메라 켜기</button><button class="btn" id="mPaste">붙여넣기</button></div>
     <input id="cam2" type="file" accept="image/*" capture="environment" hidden>
-    <div id="shot" class="hidden" style="margin-bottom:10px"><img id="shotImg" alt="" style="width:100%;border-radius:12px;display:block"><button class="btn sm block" id="shotClose" style="margin-top:8px">사진 닫기</button></div>
-    <textarea id="manText" placeholder="한 줄에 하나씩 입력&#10;84SC4XKF20NNB&#10;84647XK200NNB"></textarea>
-    <div class="row" style="margin-top:10px"><button class="btn sm" id="mClear">비우기</button><span class="hint" id="mCount" style="flex:1;text-align:right;margin:0">0개</span></div>
+    <div id="shot" class="hidden" style="margin-top:10px"><img id="shotImg" alt="" style="width:100%;border-radius:12px;display:block"><button class="btn sm block" id="shotClose" style="margin-top:8px">사진 닫기</button></div>
+    <div class="row" style="margin-top:10px"><input type="text" id="manIn" placeholder="코드 내용을 입력하고 추가" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="manAdd" style="flex:none">추가</button></div>
   </div>
-  <div class="actionbar"><div class="seg" id="manSeg"></div><button class="btn primary block" id="manMake">바코드 만들기</button></div>
+  <div class="sec-title">입력한 항목 <span class="badge" id="manCount">0</span><span class="sp"></span><button class="link" id="manClear">모두 지우기</button></div>
+  <div id="manList"></div>
 </section>
 
 <!-- 히스토리 -->
@@ -224,19 +232,25 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
   <div class="selBar"><button class="btn" id="selCancel">취소</button><button class="btn primary" id="selRead" disabled>이 영역 읽기</button></div>
 </div>
 
-<!-- 결과 보기 -->
+<!-- 상세 보기 -->
 <div id="viewer" class="overlay">
-  <div class="obar">
-    <button class="iconbtn" id="vX" aria-label="닫기"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    <div class="ttl" id="vTitle"></div>
+  <div class="obar vbar">
+    <button class="iconbtn" id="vX" aria-label="뒤로"><svg class="i" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+    <div class="ttl" id="vTitle">상세 보기</div>
+    <button class="chipbtn" id="vPng">PNG</button>
+    <button class="chipbtn" id="vCopy">복사</button>
     <button class="iconbtn" id="vDel" aria-label="삭제"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button>
   </div>
   <div id="vSlides"></div>
+  <div class="dots" id="vDots"></div>
+  <div class="vinfo">
+    <div class="vkind" id="vKind"></div>
+    <div class="vraw" id="vRaw"></div>
+    <div class="vmeta" id="vMeta"></div>
+  </div>
   <div class="vpanel">
-    <div class="dots" id="vDots"></div>
-    <input type="text" id="vText" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <input type="text" id="vText" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="내용 수정">
     <div class="seg" id="vSeg"></div>
-    <button class="btn primary block" id="vSave">이미지로 저장 / 공유</button>
   </div>
 </div>
 </div>
@@ -292,7 +306,7 @@ function saveHist(list){
 }
 function persist(batch){
   const list = loadHist(), i = list.findIndex(x => x.id === batch.id);
-  const clean = { id: batch.id, time: batch.time, items: batch.items.map(({ text, type }) => ({ text, type })) };
+  const clean = { id: batch.id, time: batch.time, items: batch.items.filter(x => x.text).map(({ text, type, fmt }) => ({ text, type, fmt })) };
   if (i >= 0) list[i] = clean; else list.unshift(clean);
   saveHist(list);
 }
@@ -327,57 +341,61 @@ function makeSeg(el, value, onChange){
   return api;
 }
 
-/* ===== 항목 목록(스캔/사진 인식 공용) ===== */
-function ItemList(host, countEl, makeBtn, onMake){
-  const L = { items: [], type: 'QR' };
-  const sync = () => {
-    countEl.textContent = L.items.length;
-    makeBtn.disabled = !L.items.length;
-    makeBtn.textContent = L.items.length ? `바코드 ${L.items.length}개 만들기` : '바코드 만들기';
-  };
+/* ===== 항목 목록(스캔/사진 인식/입력 공용): 항목을 누르면 바로 상세 보기 ===== */
+const CTL_TXT = t => {
+  const f = document.createDocumentFragment();
+  for (const ch of String(t)) {
+    const c = ch.codePointAt(0);
+    if (c < 32 || c === 127) f.append(h('span', { class: 'ctl' }, String.fromCharCode(c === 127 ? 0x2421 : 0x2400 + c)));
+    else f.append(ch);
+  }
+  return f;
+};
+function ItemList(host, countEl, onOpen){
+  const L = { items: [], type: 'QR', batch: null };
+  const sync = () => { countEl.textContent = L.items.length; };
   L.add = (text, warn, fmt) => {
     text = (text || '').trim();
     if (!text) return false;
     if (L.items.some(i => i.text === text)) return false;
     L.items.push({ text, type: L.type, warn: !!warn, fmt: fmtKey(fmt) }); L.render(); return true;
   };
-  L.clear = () => { L.items = []; L.render(); };
-  L.setType = t => { L.type = t; L.items.forEach(i => i.type = t); L.render(); };
+  L.clear = () => { L.items = []; L.batch = null; L.render(); };
   L.render = () => {
     if (!L.items.length) { host.replaceChildren(h('div', { class: 'hint', style: 'text-align:center;padding:18px 0' }, '아직 항목이 없어요')); sync(); return; }
     host.replaceChildren(...L.items.map((it, idx) => {
-      const thumb = h('div', { class: 'thumb' }), err = h('div', { class: 'err' });
-      const card = h('div', { class: 'item' + (it.warn ? ' warn' : '') });
-      const redraw = () => { err.textContent = drawCode(thumb, it, false) ? '' : '이 종류로 만들 수 없는 글자가 있어요'; };
-      const inp = h('input', { type: 'text', value: it.text, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false' });
-      inp.oninput = () => { it.text = inp.value.trim(); if (it.warn) { it.warn = false; card.classList.remove('warn'); tag.remove(); } redraw(); };
-      const tag = h('div', { class: 'tag' }, '확인 필요 · 읽기 결과가 불확실해요');
-      const del = h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: () => { L.items.splice(idx, 1); L.render(); } },
+      const thumb = h('div', { class: 'thumb' });
+      drawCode(thumb, it, false);
+      const name = it.fmt && FMT[it.fmt] ? FMT[it.fmt][1] : (it.type === 'QR' ? 'QR 코드' : '바코드');
+      const del = h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: ev => { ev.stopPropagation(); L.items.splice(idx, 1); L.render(); } },
         h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>' }));
-      let kind = null;
-      if (it.fmt) {
-        const m = FMT[it.fmt], name = m ? m[1] : it.fmt.toUpperCase();
-        kind = h('div', { class: 'kind' }, h('span', { class: 'chip' }, '읽은 종류 · ' + name));
-        if (m && m[0] && m[0] !== it.type) kind.append(h('button', { class: 'link', onclick: () => { it.type = m[0]; L.render(); } }, '이 종류로 만들기'));
-        else if (m && !m[0]) kind.append(h('span', { class: 'hint', style: 'margin:0 0 0 6px' }, '(이 종류는 만들 수 없어 QR로 대체)'));
-      }
-      card.append(thumb, h('div', { class: 'body' }, it.warn ? tag : null, kind, inp, err), del);
-      redraw();
-      return card;
+      const body = h('div', { class: 'body' },
+        it.warn ? h('div', { class: 'tag' }, '확인 필요 · 읽기 결과가 불확실해요') : null,
+        h('div', { class: 'kind' }, h('span', { class: 'chip' }, name)),
+        h('div', { class: 'txt' }, it.text ? CTL_TXT(it.text) : '(비어 있음)'),
+        h('div', { class: 'sub' }, '눌러서 자세히 보기'));
+      return h('div', { class: 'item' + (it.warn ? ' warn' : ''), onclick: () => onOpen(idx) }, thumb, body, del);
     }));
     sync();
-  };
-  makeBtn.onclick = () => {
-    const items = L.items.filter(i => i.text).map(i => ({ text: i.text, type: i.type }));
-    if (!items.length) return toast('만들 항목이 없어요');
-    onMake(items);
   };
   L.render();
   return L;
 }
+/* 목록을 한 묶음(히스토리)으로 저장하면서 상세 화면으로 이동 */
+function openList(L, idx){
+  if (!L.batch) L.batch = { id: Date.now(), time: new Date().toLocaleString('ko-KR', { hour12: false }), items: L.items };
+  L.batch.items = L.items;
+  V.onClose = () => {
+    L.items = L.items.filter(i => i.text);
+    L.batch = L.items.length ? L.batch : null;
+    if (L.batch) L.batch.items = L.items;
+    L.render();
+  };
+  openViewer(L.batch, idx);
+}
 
 /* ===== 탭 / 오버레이 ===== */
-const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', ocr: '화면을 찍고 글자 영역을 지정하세요', manual: '텍스트로 바로 만들기', hist: '지금까지 만든 코드' };
+const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', ocr: '화면을 찍고 글자 영역을 지정하세요', manual: '글자를 넣으면 바로 코드로 보여줘요', hist: '지금까지 본 코드' };
 function show(v){
   if (v !== 'live') stopScan();
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
@@ -391,25 +409,25 @@ document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.
 let overlayOpen = null;
 function openOverlay(id){ overlayOpen = id; $(id).classList.add('on'); try { history.pushState({ o: id }, ''); } catch(e){} }
 function closeOverlay(){ if (history.state && history.state.o) history.back(); else hideOverlays(); }
-function hideOverlays(){ document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on')); overlayOpen = null; }
+function hideOverlays(){
+  if ($('viewer').classList.contains('on') && V.onClose) { const f = V.onClose; V.onClose = null; try { f(); } catch(e){} }
+  document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on')); overlayOpen = null;
+}
 window.addEventListener('popstate', hideOverlays);
 
-/* ===== 결과 보기 ===== */
-const V = { batch: null, idx: 0 };
-const vSeg = makeSeg($('vSeg'), 'QR', t => { cur().type = t; redrawSlide(V.idx); persistSoon(V.batch); });
+/* ===== 상세 보기 ===== */
+const V = { batch: null, idx: 0, onClose: null };
+const vSeg = makeSeg($('vSeg'), 'QR', t => { cur().type = t; redrawSlide(V.idx); syncViewer(); persistSoon(V.batch); });
 const cur = () => V.batch.items[V.idx];
-function newBatch(items){ return { id: Date.now(), time: new Date().toLocaleString('ko-KR', { hour12: false }), items }; }
-function openViewer(batch){
-  V.batch = batch; V.idx = 0; persist(batch);
+const KIND = { QR: 'QR 코드', CODE128: '바코드 (Code 128)', CODE39: '바코드 (Code 39)', EAN13: '바코드 (EAN-13)', EAN8: '바코드 (EAN-8)', UPC: '바코드 (UPC-A)', UPCE: '바코드 (UPC-E)', ITF: '바코드 (ITF)', codabar: '바코드 (Codabar)' };
+function openViewer(batch, idx){
+  V.batch = batch; V.idx = idx || 0; persist(batch);
   buildSlides(); openOverlay('viewer');
+  requestAnimationFrame(() => { const S = $('vSlides'); S.scrollLeft = V.idx * S.clientWidth; });
 }
 function buildSlides(){
   const S = $('vSlides'); S.replaceChildren();
-  V.batch.items.forEach(it => {
-    const code = h('div', { class: 'vcode' });
-    const lab = h('div', { class: 'vlabel' }, it.text);
-    S.append(h('div', { class: 'vslide' }, code, lab));
-  });
+  V.batch.items.forEach(() => S.append(h('div', { class: 'vslide' }, h('div', { class: 'vcode' }))));
   V.batch.items.forEach((_, i) => redrawSlide(i));
   S.scrollLeft = V.idx * S.clientWidth; syncViewer();
 }
@@ -417,41 +435,52 @@ function redrawSlide(i){
   const s = $('vSlides').children[i]; if (!s) return;
   const it = V.batch.items[i], ok = drawCode(s.firstChild, it, true);
   if (!ok) s.firstChild.replaceChildren(h('div', { class: 'err', style: 'max-width:240px;text-align:center' }, '이 종류로 만들 수 없는 글자가 있어요. 종류를 바꿔 보세요.'));
-  s.lastChild.textContent = it.text;
 }
 function syncViewer(){
-  const n = V.batch.items.length;
-  $('vTitle').textContent = `${V.idx + 1} / ${n}`;
-  $('vText').value = cur().text; vSeg.set(cur().type);
+  const n = V.batch.items.length, it = cur();
+  $('vTitle').textContent = n > 1 ? `상세 보기  ${V.idx + 1} / ${n}` : '상세 보기';
+  $('vKind').textContent = KIND[it.type] || it.type;
+  $('vRaw').replaceChildren(it.text ? CTL_TXT(it.text) : '(비어 있음)');
+  const src = it.fmt && FMT[it.fmt] ? '읽은 종류 ' + FMT[it.fmt][1] : '직접 만든 코드';
+  $('vMeta').textContent = `${src} · 길이 ${[...it.text].length}자`;
+  if (document.activeElement !== $('vText')) $('vText').value = it.text;
+  vSeg.set(it.type);
   $('vDots').replaceChildren(...(n > 1 && n <= 12 ? V.batch.items.map((_, i) => h('i', { class: i === V.idx ? 'on' : '' })) : []));
 }
 $('vSlides').addEventListener('scroll', debounce(() => {
   if (!V.batch) return;
   const i = Math.max(0, Math.min(V.batch.items.length - 1, Math.round($('vSlides').scrollLeft / $('vSlides').clientWidth)));
-  if (i !== V.idx) { V.idx = i; syncViewer(); }
+  if (i !== V.idx) { V.idx = i; $('vText').value = cur().text; syncViewer(); }
 }, 60));
-$('vText').oninput = () => { cur().text = $('vText').value.trim(); redrawSlide(V.idx); persistSoon(V.batch); };
+$('vText').oninput = () => { cur().text = $('vText').value.trim(); cur().warn = false; redrawSlide(V.idx); syncViewer(); persistSoon(V.batch); };
 $('vX').onclick = closeOverlay;
 $('vDel').onclick = async () => {
   if (!(await ask('이 코드를 삭제할까요?'))) return;
   V.batch.items.splice(V.idx, 1);
   if (!V.batch.items.length) { removeBatch(V.batch.id); closeOverlay(); renderHist(); return; }
-  V.idx = Math.min(V.idx, V.batch.items.length - 1); persist(V.batch); buildSlides();
+  V.idx = Math.min(V.idx, V.batch.items.length - 1); persist(V.batch); buildSlides(); $('vText').value = cur().text; syncViewer();
 };
-$('vSave').onclick = async () => {
+async function copyText(t){
+  try { if (window.AndroidBridge && AndroidBridge.copy) AndroidBridge.copy(t); else await navigator.clipboard.writeText(t); toast('복사했어요'); }
+  catch(e){ toast('복사하지 못했어요'); }
+}
+$('vCopy').onclick = () => copyText(cur().text);
+$('vPng').onclick = async () => {
   const slide = $('vSlides').children[V.idx]; if (!slide) return;
   const el = slide.firstChild.querySelector('canvas,img'); if (!el) return toast('저장할 코드가 없어요');
   try {
     const w = el.naturalWidth || el.width, hh = el.naturalHeight || el.height, sc = Math.max(1, Math.min(3, 800 / w));
     const c = document.createElement('canvas'); c.width = Math.round(w * sc) + 80; c.height = Math.round(hh * sc) + 80;
     const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = false; g.drawImage(el, 40, 40, Math.round(w * sc), Math.round(hh * sc));
+    const name = 'code_' + Date.now() + '.png';
+    if (window.AndroidBridge && AndroidBridge.shareImage) { AndroidBridge.shareImage(c.toDataURL('image/png').split(',')[1], name); return; }
     const blob = await new Promise(r => c.toBlob(r, 'image/png'));
-    const file = new File([blob], cur().text.replace(/[^\w.-]/g, '_') + '.png', { type: 'image/png' });
+    const file = new File([blob], name, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch(e){ if (e.name === 'AbortError') return; } }
     const url = URL.createObjectURL(blob);
     const a = h('a', { href: url, download: file.name }); document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000); toast('저장했어요');
-  } catch(e){ toast('저장하지 못했어요. 화면 캡처를 이용해 주세요.'); }
+  } catch(e){ toast('이미지를 만들지 못했어요'); }
 };
 
 /* ===== 히스토리 ===== */
@@ -471,15 +500,14 @@ function renderHist(){
       h('div', { class: 'meta' }, h('b', {}, `${b.items.length}개`), h('small', {}, b.time), h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  '))),
       h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 묶음을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
         h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>' })));
-    card.onclick = () => openViewer(b);
+    card.onclick = () => { V.onClose = null; openViewer(b, 0); };
     return card;
   }));
 }
 $('histClear').onclick = async () => { if (await ask('히스토리를 모두 삭제할까요?')) { saveHist([]); renderHist(); } };
 
 /* ===== ① 스캔 (카메라로 바코드/QR 읽기) ===== */
-const live = ItemList($('liveList'), $('liveCount'), $('liveMake'), items => openViewer(newBatch(items)));
-const liveSeg = makeSeg($('liveSeg'), 'QR', t => live.setType(t));
+const live = ItemList($('liveList'), $('liveCount'), idx => openList(live, idx));
 $('liveClear').onclick = () => live.clear();
 const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } };   // 작은 QR도 읽도록 고해상도
 let scStream = null, scTimer = null, scReader = null, scBusy = false;
@@ -597,10 +625,9 @@ $('cam3').onchange = $('gal3').onchange = async e => {
 };
 
 /* ===== ② 사진 인식 (영역 지정 → 글자 읽기) ===== */
-const ocr = ItemList($('ocrList'), $('ocrCount'), $('ocrMake'), items => openViewer(newBatch(items)));
-makeSeg($('ocrSeg'), 'QR', t => ocr.setType(t));
+const ocr = ItemList($('ocrList'), $('ocrCount'), idx => openList(ocr, idx));
 $('ocrClear').onclick = () => ocr.clear();
-$('ocrAdd').onclick = () => { ocr.items.push({ text: '', type: ocr.type, warn: false }); ocr.render(); const ins = $('ocrList').querySelectorAll('input'); if (ins.length) ins[ins.length - 1].focus(); };
+$('ocrAdd').onclick = () => { ocr.items.push({ text: '', type: ocr.type, warn: false, fmt: '' }); ocr.render(); openList(ocr, ocr.items.length - 1); setTimeout(() => $('vText').focus(), 350); };
 $('ocrCam').onclick = () => $('cam').click();
 $('ocrGal').onclick = () => $('gal').click();
 $('ocrNew').onclick = () => $('cam').click();
@@ -793,24 +820,26 @@ async function ocrRegion(sx, sy, sw, sh){
 }
 
 /* ===== ③ 직접 입력 ===== */
-const manSeg = makeSeg($('manSeg'), 'QR');
-const manTokens = () => $('manText').value.split('\n').map(s => s.trim()).filter(Boolean);
-const updMan = () => { const n = manTokens().length; $('mCount').textContent = n + '개'; $('manMake').disabled = !n; };
-function addManual(t){
+const man = ItemList($('manList'), $('manCount'), idx => openList(man, idx));
+$('manClear').onclick = () => man.clear();
+function addManual(t){                                           // 붙여넣기: 기존 항목은 지우고 새로 채움
   const toks = String(t).split(/[\s,;]+/).map(s => s.trim()).filter(s => s.length >= 3);
   if (!toks.length) return toast('붙여넣을 글자가 없어요');
-  $('manText').value = toks.join('\n'); updMan(); toast(`${toks.length}개 붙여넣었어요`);
+  man.clear(); toks.forEach(x => man.add(x)); toast(`${toks.length}개 붙여넣었어요`);
 }
-$('manText').addEventListener('input', updMan);
-$('manText').addEventListener('paste', e => { const t = (e.clipboardData || window.clipboardData).getData('text'); if (t) { e.preventDefault(); addManual(t); } });
+$('manAdd').onclick = () => {
+  const v = $('manIn').value.trim(); if (!v) return;
+  if (man.add(v)) { $('manIn').value = ''; openList(man, man.items.length - 1); } else toast('이미 있는 항목이에요');
+};
+$('manIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('manAdd').click(); });
+$('manIn').addEventListener('paste', e => { const t = (e.clipboardData || window.clipboardData).getData('text'); if (t && /[\s,;]/.test(t.trim())) { e.preventDefault(); addManual(t); } });
 $('mPaste').onclick = async () => {
   try {
     const t = window.AndroidBridge ? AndroidBridge.getClipboard() : await navigator.clipboard.readText();
     if (!t) return toast('복사된 글자가 없어요');
     addManual(t);
-  } catch(e){ $('manText').focus(); toast('자동 붙여넣기가 막혀 있어요. 입력칸을 길게 눌러 붙여넣어 주세요', 3600); }
+  } catch(e){ $('manIn').focus(); toast('자동 붙여넣기가 막혀 있어요. 입력칸을 길게 눌러 붙여넣어 주세요', 3600); }
 };
-$('mClear').onclick = () => { $('manText').value = ''; updMan(); };
 $('mCam').onclick = () => $('cam2').click();
 $('cam2').onchange = e => {
   const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
@@ -818,17 +847,12 @@ $('cam2').onchange = e => {
   $('shotImg').src = URL.createObjectURL(f); $('shot').classList.remove('hidden'); $('shot').scrollIntoView({ behavior: 'smooth' });
 };
 $('shotClose').onclick = () => $('shot').classList.add('hidden');
-$('manMake').onclick = () => {
-  const items = manTokens().map(text => ({ text, type: manSeg.value }));
-  if (!items.length) return toast('내용을 입력해 주세요');
-  openViewer(newBatch(items));
-};
 
 /* ===== 시작 ===== */
 if (NATIVE) {                                                  // 앱에서는 전용 카메라 화면을 쓰므로 웹 카메라 영역은 숨김
   $('scBtn').textContent = '실시간 스캔 시작'; $('scBtn').className = 'btn primary block'; $('pScan').className = 'btn';
 }
-show('live'); updMan();
+show('live');
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
