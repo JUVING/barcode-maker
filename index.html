@@ -181,6 +181,7 @@ $('cam').onchange = async e => {
   openSel();
 };
 function openSel(){
+  getWorker().catch(() => {});                    // 드래그하는 동안 인식 엔진 미리 준비
   const old = document.querySelector('#imgwrap .box'); if (old) old.remove();
   selRect = null; $('selRead').disabled = true;
   $('selMsg').textContent = '읽을 부분을 손가락으로 드래그해 네모로 지정하세요';
@@ -189,12 +190,12 @@ function openSel(){
 function closeSel(){ $('sel').classList.remove('on'); }
 function readSel(){ if (selRect) ocrRegion(...selRect); }
 let selRect = null;
-let srcCanvas = null, worker = null;
+let srcCanvas = null, worker = null, ocrBusy = false;
 async function getWorker(){
   if (!worker) {
-    try {   // 정확도 높은 'best' 학습 데이터 (실패하면 기본값)
-      worker = await Tesseract.createWorker('eng', 1, { langPath: 'https://tessdata.projectnaptha.com/4.0.0_best' });
-    } catch (e) { worker = await Tesseract.createWorker('eng'); }
+    worker = await Tesseract.createWorker('eng', 1, {
+      logger: m => { if (ocrBusy && m.status) $('selMsg').textContent = '인식 중: ' + m.status + ' ' + Math.round((m.progress || 0) * 100) + '%'; }
+    });
     await worker.setParameters({
       user_defined_dpi: '300',
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/.',
@@ -287,8 +288,11 @@ $('cam2').onchange = e => {
   $('shot').scrollIntoView();
 };
 async function pasteText(){
-  try { addManual(await navigator.clipboard.readText()); }
-  catch(e){ $('manText').focus(); alert('자동 붙여넣기가 막혀 있습니다. 입력칸을 길게 눌러 "붙여넣기"를 선택하세요.'); }
+  try {
+    const t = window.AndroidBridge ? AndroidBridge.getClipboard() : await navigator.clipboard.readText();
+    if (!t) throw new Error('empty');
+    addManual(t);
+  } catch(e){ $('manText').focus(); alert('자동 붙여넣기가 막혀 있습니다. 입력칸을 길게 눌러 "붙여넣기"를 선택하세요.'); }
 }
 $('manText').addEventListener('paste', e => {
   const t = (e.clipboardData || window.clipboardData).getData('text');
@@ -394,7 +398,7 @@ function mkVariant(gr, W, x0, y0, x1, y1, th){      // th=null 이면 대비 확
 }
 async function ocrRegion(sx, sy, sw, sh){
   $('selMsg').textContent = '글자 인식 중... (처음에는 데이터 다운로드로 조금 걸립니다)';
-  $('selRead').disabled = true;
+  $('selRead').disabled = true; ocrBusy = true;
   try {
     const up = Math.max(1, Math.min(4, 1200 / sw));
     const base = document.createElement('canvas');
@@ -421,12 +425,13 @@ async function ocrRegion(sx, sy, sw, sh){
       let bx0 = W, bx1 = 0;
       for (let x = 0; x < W; x++) { let n = 0; for (let y = by0; y <= by1; y++) if (gr[y * W + x] <= th) n++; if (n >= 2) { if (x < bx0) bx0 = x; bx1 = x; } }
       if (bx1 - bx0 < 60) continue;
-      const votes = {};
-      for (const [bl, dl] of [[0, 0], [1, 0], [1, -15], [1, 15], [2, 0], [2, -10], [2, 10], [0, null]]) {
+      const votes = {}, raws = {};
+      for (const [bl, dl] of [[0, 0], [1, 0], [0, null], [1, -15], [1, 15], [2, 0]]) {
         const r = await w.recognize(mkVariant2(gr, W, bx0, by0, bx1, by1, bl, dl));
         const txt = r.data.text.replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase();
-        if (!/^[A-Z0-9\-_.\/]{6,}$/.test(txt) || !/\d/.test(txt) || !/[A-Z]/.test(txt)) continue;
+        if (!/^[A-Z0-9\-_.\/]{6,}$/.test(txt) || !/\d/.test(txt) || !/[A-Z]/.test(txt)) { if (txt.length >= 4) raws[txt] = (raws[txt] || 0) + 1; continue; }
         const v = votes[txt] || (votes[txt] = { n: 0, c: 0 }); v.n++; v.c += r.data.confidence;
+        if (v.n >= 2) break;                              // 같은 결과가 2번 나오면 바로 종료(속도)
       }
       const ents = Object.entries(votes);
       if (ents.length) {                                  // 같은 길이끼리 글자 위치별 다수결
@@ -441,15 +446,18 @@ async function ocrRegion(sx, sy, sw, sh){
           const keys = Object.keys(m); if (keys.length > 1) agree = false;
           text += keys.sort((a, b) => m[b] - m[a])[0];
         }
-        if (validCode(text)) found.push({ text, warn: !agree || cnt(grp) < 3 });
+        if (validCode(text)) found.push({ text, warn: !agree || cnt(grp) < 2 });
+      } else {
+        const rk = Object.keys(raws).sort((a, b) => raws[b] - raws[a])[0];
+        if (rk) found.push({ text: rk, warn: true });   // 형식이 안 맞아도 읽은 원문은 보여주고 직접 고치게 함
       }
     }
     if (!found.length) { await w.setParameters({ tessedit_pageseg_mode: '6' }); return ocrRegionOld(sx, sy, sw, sh); }
     finishPicks(found);
   } catch (err) {
-    $('selMsg').textContent = '인식 실패: ' + err.message + ' (인터넷 연결 확인)';
+    $('selMsg').textContent = '인식 실패: ' + (err && err.message || err) + ' (인터넷 연결 확인)';
     $('selRead').disabled = false;
-  }
+  } finally { ocrBusy = false; }
 }
 async function ocrRegionOld(sx, sy, sw, sh){
   $('selMsg').textContent = '글자 인식 중... (처음에는 데이터 다운로드로 조금 걸립니다)';
