@@ -30,6 +30,12 @@
     <div class="card">
       <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="frame"></div><div class="camhint">바코드나 QR을 네모 안에 맞추면<br>자동으로 읽어서 목록에 추가합니다</div></div>
       <div class="row hidden" id="camTools" style="margin-bottom:8px"><button class="btn sm" id="torchBtn">조명 켜기</button><button class="btn sm" id="afBtn">자동 초점</button></div>
+      <div id="livePanel" class="livepanel hidden">
+        <div class="livehead"><span id="liveCount" class="livecount">코드를 네모 안에 맞추세요</span><button type="button" class="btn sm" id="liveMode2">마지막 것만</button></div>
+        <div id="liveList" class="livelist"></div>
+        <div class="livezoom"><span>확대</span><input id="liveZoom" type="range" min="0" max="100" value="0" aria-label="확대"></div>
+        <div class="row"><button type="button" class="btn sm" id="liveTorch">조명</button><button type="button" class="btn sm" id="liveClear">지우기</button><button type="button" class="btn sm primary" id="liveDone">완료</button></div>
+      </div>
       <input id="zoom" type="range" class="hidden">
       <input id="focus" type="range" class="hidden" aria-label="초점 거리">
       <button id="scBtn" class="btn block">실시간 스캔</button>

@@ -122,7 +122,7 @@ const SRC_ALIAS = { '입력': '만들기', '사진 인식': '텍스트 인식' }
 const srcLabel = s => SRC_ALIAS[s] || s || '';
 const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', manual: '글자를 넣으면 바로 코드로 만들어요', hist: '지금까지 본 코드', settings: '버전 · 스캔 · 보안' };
 function show(v, dir){
-  if (v !== 'live') stopScan(true);
+  if (v !== 'live') { stopScan(true); if (window.liveOff) liveOff(false); }
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
   $('sub').textContent = v === 'live' ? liveSub() : (SUBS[v] || '');
@@ -407,9 +407,57 @@ function scanOpts(){
 function saveScanOpts(o){ try { localStorage.setItem('bc_scan_opts', JSON.stringify(o)); } catch(e){} }
 function startNativeScan(){
   const oo = scanOpts(); oo.ref = window.refForNative ? window.refForNative() : null;     // 기준값 비교 정보도 함께 전달
+  if (AndroidBridge.liveStart) return liveOn(oo);                                         // 탭 안에서 바로 카메라 (ROI)
   const o = JSON.stringify(oo);
   if (AndroidBridge.scanLive2) AndroidBridge.scanLive2(o); else AndroidBridge.scanLive();     // 옛 앱 호환
 }
+/* --- 탭 안의 실시간 카메라: 네이티브 카메라 화면을 camwrap 위치에 겹쳐 보여 줌 --- */
+let liveActive = false, liveCodes = [], liveCollectOn = false, liveTorchOn = false, liveTimer = null;
+function liveRectPx(){ const r = $('camwrap').getBoundingClientRect(), d = window.devicePixelRatio || 1; return [Math.round(r.left * d), Math.round(r.top * d), Math.round(r.width * d), Math.round(r.height * d)]; }
+function liveUi(on){
+  $('camwrap').classList.toggle('on', on); $('camwrap').classList.toggle('nlive', on);
+  $('livePanel').classList.toggle('hidden', !on);
+  document.querySelectorAll('#paneCode .tips,#refCard').forEach(e => e.classList.toggle('hide', on));
+  $('scBtn').classList.toggle('hidden', on); $('pScan').parentElement.classList.toggle('hidden', on);
+}
+function liveOn(oo){
+  liveCodes = []; liveTorchOn = false; $('liveZoom').value = 0; renderLive({ n: 0, ok: -1, codes: [] });
+  $('liveMode2').textContent = liveCollectOn ? '여러 개 모으기' : '마지막 것만';
+  liveUi(true);
+  requestAnimationFrame(() => {
+    oo.collect = liveCollectOn;
+    if (!AndroidBridge.liveStart(JSON.stringify(oo), ...liveRectPx())) { liveUi(false); return toast('카메라를 켤 수 없어요. 카메라 권한을 확인하세요', 3200); }
+    liveActive = true;
+    clearInterval(liveTimer); let last = '';
+    liveTimer = setInterval(() => { if (!liveActive) return; const r = liveRectPx().join(','); if (r !== last) { last = r; AndroidBridge.liveRect(...liveRectPx()); } }, 400);
+  });
+}
+function liveOff(finish){
+  if (!liveActive) return;
+  liveActive = false; clearInterval(liveTimer);
+  try { AndroidBridge.liveStop(); } catch(e){}
+  liveUi(false);
+  if (finish && liveCodes.length) { haptic(); showResults(liveCodes.map(c => ({ text: c.text, fmt: c.format })), '스캔'); }
+}
+function renderLive(o){
+  liveCodes = o.codes || [];
+  const n = o.n || 0, el = $('liveCount');
+  el.className = 'livecount';
+  if (!n) el.textContent = '코드를 네모 안에 맞추세요';
+  else if (o.ok >= 0) { const bad = n - o.ok; el.textContent = bad ? '일치 ' + o.ok + ' · 불일치 ' + bad : '일치 ' + o.ok + '개'; el.classList.add(bad ? 'bad' : 'ok'); }
+  else el.textContent = (liveCollectOn ? '누적 ' : '') + n + '개 읽음';
+  const l = $('liveList'); l.textContent = '';
+  liveCodes.slice(-6).forEach(c => { const d = document.createElement('div'); d.textContent = (c.format || '').toUpperCase().replace(/_/g, ' ') + '  ' + String(c.text).replace(/\x1d/g, '<GS>').replace(/\x1e/g, '<RS>').replace(/\x04/g, '<EOT>').slice(0, 60); l.appendChild(d); });
+  $('liveDone').textContent = n ? '완료 (' + n + '개)' : '완료';
+}
+window.__liveUpdate = json => {
+  try { const o = JSON.parse(json); if (o.stopped) { liveActive = false; clearInterval(liveTimer); liveUi(false); return; } if (!liveActive) return; renderLive(o); if (o.done) liveOff(true); } catch(e){}
+};
+$('liveDone').onclick = () => liveOff(true);
+$('liveClear').onclick = () => { AndroidBridge.liveClear(); };
+$('liveTorch').onclick = () => { liveTorchOn = !liveTorchOn; AndroidBridge.liveTorch(liveTorchOn); };
+$('liveZoom').oninput = e => AndroidBridge.liveZoom(+e.target.value / 100);
+$('liveMode2').onclick = () => { liveCollectOn = !liveCollectOn; $('liveMode2').textContent = liveCollectOn ? '여러 개 모으기' : '마지막 것만'; AndroidBridge.liveCollect(liveCollectOn); };
 const webScan = new Map();                                       // 웹 버전 실시간 스캔: 끄면 한꺼번에 결과로 보여 줌
 function onScan(t, f){ if (t && !webScan.has(t)) { webScan.clear(); webScan.set(t, f); haptic(); $('scBtn').textContent = '실시간 스캔 끄기 (읽음)'; } }
 function finishWebScan(){ const items = [...webScan].map(([text, fmt]) => ({ text, fmt })); webScan.clear(); if (items.length) showResults(items, '스캔'); }
@@ -751,7 +799,7 @@ function setMode(m){
   $('paneText').classList.toggle('hidden', m !== 'text');
   $('liveMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   $('recentLive').dataset.recent = m === 'text' ? '텍스트 인식' : '스캔';
-  if (m !== 'code') stopScan(true);
+  if (m !== 'code') { stopScan(true); liveOff(false); }
   $('sub').textContent = liveSub();
   renderRecent();
 }

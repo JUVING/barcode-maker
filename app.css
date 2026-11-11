@@ -80,6 +80,15 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 /* 카메라 */
 .camwrap{display:none;position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:16/10;margin-bottom:10px}
 .camwrap.on{display:block}
+.camwrap.nlive{aspect-ratio:4/3;margin-bottom:8px}
+.livepanel{margin-bottom:8px}
+.livehead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.livecount{font-weight:800;font-size:15px}
+.livecount.ok{color:#2ea043}.livecount.bad{color:var(--danger)}
+.livelist{max-height:64px;overflow:auto;font-size:12px;color:var(--mut);margin-bottom:6px;word-break:break-all}
+.livezoom{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;color:var(--mut)}
+.livezoom input{flex:1}
+.tips.hide,.refcard.hide{display:none}
 .camwrap video{width:100%;height:100%;object-fit:cover;display:none}
 .camhint{position:absolute;inset:0;display:grid;place-items:center;color:#cbd5e1;font-size:13px;text-align:center;padding:20px;
   background:radial-gradient(circle at 50% 40%,#1e293b,#020617)}
