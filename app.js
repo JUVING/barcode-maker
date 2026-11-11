@@ -238,7 +238,7 @@ function showSel(){
     h('div', { class: 'v' }, CTL_TXT(picked)),
     h('div', { class: 'nums' }, h('span', {}, `시작 위치 ${start}`), h('span', {}, `끝 위치 ${end}`), h('span', {}, `길이 ${len}`), h('span', {}, `전체 ${n}자`)),
     h('div', { class: 'btns' },
-      h('button', { class: 'chipbtn', onclick: () => copyText(`${start}, ${len}`) }, '숫자만 복사'),
+      h('button', { class: 'chipbtn', onclick: () => copyText(SEL.chars.join('')) }, '전체 복사'),
       h('button', { class: 'chipbtn', onclick: () => copyText(picked) }, '선택 글자 복사'),
       h('button', { class: 'chipbtn', onclick: () => { SEL.a = SEL.b = -1; showSel(); } }, '선택 해제')));
 }
