@@ -83,16 +83,13 @@ function initRef(){
     if (f.size > 2 * 1024 * 1024) return toast('파일이 너무 커요 (2MB 이하)');
     const rd = new FileReader();
     rd.onload = () => {
-      const rows = String(rd.result || '').replace(/^﻿/, '').split(/?
-/).map(l => l.split(/[,;	+]/).map(c => c.replace(/^"+|"+$/g, '').trim()).filter(Boolean)).filter(c => c.length >= 2);
+      const txt = String(rd.result || '').replace(/^\uFEFF/, '');
+      const rows = txt.split(/\r?\n/).map(l => l.split(/[,;\t+]/).map(c => c.replace(/^"+|"+$/g, '').trim()).filter(Boolean)).filter(c => c.length >= 2);
       if (rows.length && /^(규칙|조건|rule|rules|code|코드)$/i.test(rows[0][0])) rows.shift();         // 제목 줄은 건너뜀
-      const have = new Set($('pairIn').value.split(/?
-/).map(x => x.trim()).filter(Boolean)), add = [];
+      const have = new Set($('pairIn').value.split(/\r?\n/).map(x => x.trim()).filter(Boolean)), add = [];
       rows.slice(0, 3000).forEach(c => { const line = c.join(' + '); if (!have.has(line)) { have.add(line); add.push(line); } });
       if (!add.length) return toast('불러올 규칙이 없어요. 한 줄에 글자 2개 이상이 필요해요', 3200);
-      const cur = $('pairIn').value.trim(); $('pairIn').value = (cur ? cur + '
-' : '') + add.join('
-');
+      const cur = $('pairIn').value.trim(); $('pairIn').value = (cur ? cur + '\n' : '') + add.join('\n');
       toast(add.length + '개 규칙을 불러왔어요. 저장을 눌러야 적용돼요', 3200);
     };
     rd.onerror = () => toast('파일을 읽지 못했어요');
