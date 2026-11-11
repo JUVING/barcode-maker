@@ -10,13 +10,13 @@ function loadLib(url){
     document.head.append(s);
   });
 }
-const TYPES = [['QR', 'QR'], ['CODE128', '바코드'], ['CODE39', 'Code39']];
+const TYPES = [['QR', 'QR'], ['CODE128', 'Code128'], ['CODE39', 'Code39'], ['DATAMATRIX', 'Data Matrix'], ['PDF417', 'PDF417']];
 // 스캔으로 알아낸 코드 종류 → [만들 때 쓸 종류, 표시 이름]
 const FMT = {
   qr_code: ['QR', 'QR 코드'], code_128: ['CODE128', 'Code 128'], code_39: ['CODE39', 'Code 39'],
   ean_13: ['EAN13', 'EAN-13'], ean_8: ['EAN8', 'EAN-8'], upc_a: ['UPC', 'UPC-A'], upc_e: ['UPCE', 'UPC-E'],
   itf: ['ITF', 'ITF'], codabar: ['codabar', 'Codabar'], code_93: [null, 'Code 93'],
-  data_matrix: [null, 'Data Matrix'], pdf417: [null, 'PDF417'], aztec: [null, 'Aztec']
+  data_matrix: ['DATAMATRIX', 'Data Matrix'], pdf417: ['PDF417', 'PDF417'], aztec: [null, 'Aztec']
 };
 const fmtKey = f => String(f || '').toLowerCase();
 const KEY = 'bc_history_v1', MAXHIST = 100;
@@ -54,7 +54,7 @@ function saveHist(list){
 }
 function persist(batch){
   const list = loadHist(), i = list.findIndex(x => x.id === batch.id);
-  const clean = { id: batch.id, time: batch.time, src: batch.src || '', title: batch.title || '', items: batch.items.filter(x => x.text).map(({ text, type, fmt }) => ({ text, type, fmt })) };
+  const clean = { id: batch.id, time: batch.time, src: batch.src || '', title: batch.title || '', pin: !!batch.pin, items: batch.items.filter(x => x.text).map(({ text, type, fmt, ok }) => ({ text, type, fmt, ok })) };
   if (i >= 0) list[i] = clean; else list.unshift(clean);
   saveHist(list);
 }
@@ -65,6 +65,13 @@ function drawCode(host, it, big){
   host.replaceChildren();
   if (!it.text) return true;
   try {
+    if (it.type === 'DATAMATRIX' || it.type === 'PDF417') {                       // 앱(구글/ZXing)에서만 만들 수 있음
+      if (!(NATIVE && AndroidBridge.encode)) return false;
+      const b64 = AndroidBridge.encode(it.type, it.text, big ? 640 : 220);
+      if (!b64) return false;
+      host.append(h('img', { src: 'data:image/png;base64,' + b64, alt: it.type, style: big ? 'width:min(80vw,340px);image-rendering:pixelated' : '' }));
+      return true;
+    }
     if (it.type === 'QR') {
       const q = qrcode(0, 'M'); q.addData(it.text); q.make();
       host.append(h('img', { src: q.createDataURL(big ? 10 : 4, big ? 2 : 1), alt: 'QR', style: big ? 'width:min(72vw,320px);image-rendering:pixelated' : '' }));
@@ -101,8 +108,9 @@ const CTL_TXT = t => {
 };
 /* 읽은/입력한 결과는 각 탭에 남기지 않고, 바로 상세 보기로 열면서 히스토리에만 저장한다 (src: 스캔 / 텍스트 인식 / 만들기) */
 function showResults(items, src){
-  items = items.filter(i => i && i.text).map(i => ({ text: String(i.text), type: i.type || 'QR', warn: !!i.warn, fmt: fmtKey(i.fmt) }));
+  items = items.filter(i => i && i.text).map(i => ({ text: String(i.text), type: i.type || 'QR', warn: !!i.warn, fmt: fmtKey(i.fmt), ok: i.ok }));
   if (!items.length) return false;
+  if (window.applyRef) items = window.applyRef(items, src);          // 기준값과 비교(설정한 경우)
   $('toast').classList.remove('on');
   const batch = { id: Date.now(), time: new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }), src, items };
   V.onClose = null; openViewer(batch, 0);
@@ -113,7 +121,7 @@ function showResults(items, src){
 const SRC_ALIAS = { '입력': '만들기', '사진 인식': '텍스트 인식' };         // 옛 기록의 라벨도 새 이름으로 보여 줌
 const srcLabel = s => SRC_ALIAS[s] || s || '';
 const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', manual: '글자를 넣으면 바로 코드로 만들어요', hist: '지금까지 본 코드', settings: '버전 · 스캔 · 보안' };
-function show(v){
+function show(v, dir){
   if (v !== 'live') stopScan(true);
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
@@ -121,6 +129,7 @@ function show(v){
   if (v === 'hist') renderHist();
   if (v === 'settings') renderSettings();
   renderRecent();
+  if (dir) { const el = $('v-' + v); el.classList.remove('in-l', 'in-r'); void el.offsetWidth; el.classList.add(dir > 0 ? 'in-r' : 'in-l'); }
   $('v-' + v).scrollTop = 0; document.querySelector('main').scrollTop = 0;
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.dataset.v));
@@ -145,7 +154,7 @@ window.__back = () => { if (document.querySelector('.overlay.on')) { if (!ocrBus
 const V = { batch: null, idx: 0, onClose: null };
 const vSeg = makeSeg($('vSeg'), 'QR', t => { cur().type = t; redrawSlide(V.idx); syncViewer(); persistSoon(V.batch); });
 const cur = () => V.batch.items[V.idx];
-const KIND = { QR: 'QR 코드', CODE128: '바코드 (Code 128)', CODE39: '바코드 (Code 39)', EAN13: '바코드 (EAN-13)', EAN8: '바코드 (EAN-8)', UPC: '바코드 (UPC-A)', UPCE: '바코드 (UPC-E)', ITF: '바코드 (ITF)', codabar: '바코드 (Codabar)' };
+const KIND = { DATAMATRIX: 'Data Matrix', PDF417: 'PDF417', QR: 'QR 코드', CODE128: '바코드 (Code 128)', CODE39: '바코드 (Code 39)', EAN13: '바코드 (EAN-13)', EAN8: '바코드 (EAN-8)', UPC: '바코드 (UPC-A)', UPCE: '바코드 (UPC-E)', ITF: '바코드 (ITF)', codabar: '바코드 (Codabar)' };
 /* ----- 제목(선택): 히스토리에서 구분하기 쉽게 ----- */
 function recentTitles(){
   const seen = new Set(), out = [];
@@ -188,6 +197,7 @@ function syncViewer(){
   $('vMeta').textContent = `${V.batch.src ? srcLabel(V.batch.src) + ' · ' : ''}${src} · 길이 ${[...it.text].length}자`;
   if (document.activeElement !== $('vText')) $('vText').value = it.text;
   vSeg.set(it.type);
+  if (window.renderExtras) window.renderExtras();
   $('vDots').replaceChildren(...(n > 1 && n <= 12 ? V.batch.items.map((_, i) => h('i', { class: i === V.idx ? 'on' : '' })) : []));
 }
 /* ----- 글자 선택: 위치/길이 보기 (Mid 함수용, 1부터 시작) ----- */
@@ -221,7 +231,7 @@ function selToken(i){                       // 구분 문자(제어문자/공백
 }
 function baseBar(){
   const base = getBase();
-  const mk = (v, label) => h('button', { type: 'button', class: base === v ? 'on' : '', onclick: () => { setBase(v); updTicks(); showSel(); } }, label);
+  const mk = (v, label) => h('button', { type: 'button', class: base === v ? 'on' : '', onclick: () => { setBase(v); updTicks(); showSel(); if (window.renderFields) window.renderFields(); } }, label);
   return h('div', { class: 'basebar' }, h('span', {}, '위치 기준'), h('div', { class: 'seg' }, mk(0, '0부터'), mk(1, '1부터')));
 }
 function showSel(){
@@ -313,34 +323,76 @@ $('vPng').onclick = async () => {
 
 /* ===== 히스토리 ===== */
 function removeBatch(id){ saveHist(loadHist().filter(b => b.id !== id)); }
+const HS = { sel: false, set: new Set() };
+function dayLabel(ts){
+  const d = new Date(ts), t = new Date(), day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(t) - day(d)) / 86400000);
+  return diff === 0 ? '오늘' : diff === 1 ? '어제' : `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+function pinToggle(id){ const list = loadHist(), x = list.find(b => b.id === id); if (x) { x.pin = !x.pin; saveHist(list); } renderHist(); }
 function renderHist(){
-  const all = loadHist(), L = $('histList'), q = ($('histQ').value || '').trim().toLowerCase();
-  $('histFoot').classList.toggle('hidden', !all.length);
-  $('histQ').classList.toggle('hidden', !all.length);
-  if (!all.length) {
+  const all = loadHist(), L = $('histList'), q = ($('histQ').value || '').trim().toLowerCase(), has = all.length > 0;
+  ['histQ', 'histSel', 'histExp'].forEach(id => $(id).classList.toggle('hidden', !has));
+  $('histFoot').classList.toggle('hidden', !has || HS.sel);
+  $('histSelBar').classList.toggle('hidden', !(has && HS.sel));
+  $('histSel').textContent = HS.sel ? '완료' : '선택';
+  if (!has) {
+    HS.sel = false; HS.set.clear();
     L.replaceChildren(h('div', { class: 'card empty' }, h('div', { class: 'ico', html: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>' }),
       h('h3', {}, '아직 기록이 없어요'), h('p', { style: 'margin:0' }, '코드를 스캔하거나 만들면 여기에 저장돼요.')));
     return;
   }
   const list = q ? all.filter(b => ((b.title || '') + ' ' + srcLabel(b.src) + ' ' + b.items.map(x => x.text).join(' ')).toLowerCase().includes(q)) : all;
   if (!list.length) { L.replaceChildren(h('div', { class: 'hint', style: 'text-align:center;padding:24px 0' }, '검색 결과가 없어요')); return; }
-  L.replaceChildren(...list.map(b => {
+  const card = b => {
     const thumb = h('div', { class: 'thumb' });
     if (b.items[0]) drawCode(thumb, b.items[0], false);
-    const n = b.items.length;
-    const card = h('div', { class: 'hist' }, thumb,
-      h('div', { class: 'meta' },
-        h('b', {}, b.title || `${n}개`),
-        b.src ? h('span', { class: 'chip', style: 'margin-left:8px' }, srcLabel(b.src)) : null,
-        h('small', {}, `${b.title ? n + '개 · ' : ''}${b.time}`),
-        h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  '))),
-      h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 기록을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
-        h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>' })));
-    card.onclick = () => { V.onClose = () => renderHist(); openViewer(b, 0); };
-    return card;
-  }));
+    const n = b.items.length, okN = b.items.filter(i => i.ok === true).length, badN = b.items.filter(i => i.ok === false).length;
+    const meta = h('div', { class: 'meta' },
+      h('b', {}, b.title || `${n}개`),
+      b.src ? h('span', { class: 'chip', style: 'margin-left:8px' }, srcLabel(b.src)) : null,
+      badN ? h('span', { class: 'sumchip ng' }, `불일치 ${badN}`) : (okN ? h('span', { class: 'sumchip ok' }, `일치 ${okN}`) : null),
+      h('small', {}, `${b.title ? n + '개 · ' : ''}${b.time}`),
+      h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  ')));
+    let lead = null, tail;
+    if (HS.sel) {
+      lead = h('span', { class: 'chk' + (HS.set.has(b.id) ? ' on' : '') }, HS.set.has(b.id) ? '✓' : '');
+      tail = null;
+    } else {
+      tail = [h('button', { class: 'star' + (b.pin ? ' on' : ''), 'aria-label': '고정', onclick: ev => { ev.stopPropagation(); pinToggle(b.id); } },
+          h('span', { html: '<svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>' })),
+        h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 기록을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
+          h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>' }))];
+    }
+    const el = h('div', { class: 'hist' }, lead, thumb, meta, ...(tail || []));
+    el.onclick = () => {
+      if (HS.sel) { HS.set.has(b.id) ? HS.set.delete(b.id) : HS.set.add(b.id); renderHist(); return; }
+      V.onClose = () => renderHist(); openViewer(b, 0);
+    };
+    return el;
+  };
+  const frag = [], pinned = list.filter(b => b.pin), rest = list.filter(b => !b.pin);
+  if (pinned.length) { frag.push(h('div', { class: 'grp' }, '고정')); pinned.forEach(b => frag.push(card(b))); }
+  let last = '';
+  rest.forEach(b => { const d = dayLabel(b.id); if (d !== last) { frag.push(h('div', { class: 'grp' }, d)); last = d; } frag.push(card(b)); });
+  L.replaceChildren(...frag);
+  $('hsDel').textContent = `삭제 ${HS.set.size}`; $('hsExp').textContent = `내보내기 ${HS.set.size}`;
+  $('hsDel').disabled = $('hsExp').disabled = HS.set.size === 0;
 }
-$('histQ').addEventListener('input', renderHist);
+$('histSel').onclick = () => { HS.sel = !HS.sel; HS.set.clear(); renderHist(); };
+$('hsCancel').onclick = () => { HS.sel = false; HS.set.clear(); renderHist(); };
+$('hsAll').onclick = () => {
+  const ids = loadHist().map(b => b.id);
+  if (HS.set.size === ids.length) HS.set.clear(); else ids.forEach(i => HS.set.add(i));
+  renderHist();
+};
+$('hsDel').onclick = async () => {
+  if (!HS.set.size) return;
+  if (!(await ask(`선택한 ${HS.set.size}건을 삭제할까요?`))) return;
+  saveHist(loadHist().filter(b => !HS.set.has(b.id))); HS.sel = false; HS.set.clear(); renderHist(); toast('삭제했어요');
+};
+$('hsExp').onclick = () => { if (HS.set.size) openExport([...HS.set]); };
+$('histExp').onclick = () => openExport(null);
 $('histClear').onclick = async () => { if (await ask('히스토리를 모두 삭제할까요?')) { saveHist([]); renderHist(); } };
 
 /* ===== ① 스캔 (카메라로 바코드/QR 읽기) ===== */
@@ -349,12 +401,13 @@ let scStream = null, scTimer = null, scReader = null, scBusy = false;
 $('scBtn').onclick = () => { if (NATIVE) return startNativeScan(); if (scBusy) return; (scStream || scReader) ? stopScan(true) : startScan(); };
 const SCAN_DELAYS = [[0, '없음'], [500, '0.5초'], [1000, '1초'], [2000, '2초'], [3000, '3초']];
 function scanOpts(){
-  try { const o = JSON.parse(localStorage.getItem('bc_scan_opts') || '{}'); return { delay: SCAN_DELAYS.some(d => d[0] === o.delay) ? o.delay : 1000, rearm: !!o.rearm }; }
+  try { const o = JSON.parse(localStorage.getItem('bc_scan_opts') || '{}'); return { delay: SCAN_DELAYS.some(d => d[0] === o.delay) ? o.delay : 1000, rearm: !!o.rearm, vibrate: o.vibrate !== false, sound: !!o.sound, autoClose: !!o.autoClose }; }
   catch(e){ return { delay: 1000, rearm: false }; }
 }
 function saveScanOpts(o){ try { localStorage.setItem('bc_scan_opts', JSON.stringify(o)); } catch(e){} }
 function startNativeScan(){
-  const o = JSON.stringify(scanOpts());
+  const oo = scanOpts(); oo.ref = window.refForNative ? window.refForNative() : null;     // 기준값 비교 정보도 함께 전달
+  const o = JSON.stringify(oo);
   if (AndroidBridge.scanLive2) AndroidBridge.scanLive2(o); else AndroidBridge.scanLive();     // 옛 앱 호환
 }
 const webScan = new Map();                                       // 웹 버전 실시간 스캔: 끄면 한꺼번에 결과로 보여 줌
@@ -429,7 +482,7 @@ window.__nativeScan = (json, source) => {
     else if (source === 'photo') toast('코드를 찾지 못했어요. 코드가 크게 나오게 정면에서 다시 찍어 보세요', 3600);
   } catch(e){}
 };
-/* --- 찍어서 스캔: 사진 한 장에서 코드를 전부 찾기 (전체 → 2×2 → 3×3 조각 순서로 시도) --- */
+/* --- 이미지 스캔: 사진 한 장에서 코드를 전부 찾기 (전체 → 2×2 → 3×3 조각 순서로 시도) --- */
 async function detectAll(canvas){
   const found = new Map();
   const det = ('BarcodeDetector' in window) ? (() => { try { return new BarcodeDetector(); } catch(e){ return null; } })() : null;
@@ -746,6 +799,26 @@ $('manIn').addEventListener('input', updPreview);
 if (NATIVE) {                                                  // 앱에서는 전용 카메라 화면을 쓰므로 웹 카메라 영역은 숨김
   $('scBtn').textContent = '실시간 스캔'; $('scBtn').className = 'btn primary block'; $('pScan').className = 'btn';
 }
+/* ===== 좌/우로 넘겨서 탭 이동 ===== */
+(function(){
+  const ORDER = ['live', 'manual', 'hist', 'settings'];
+  let x0 = 0, y0 = 0, t0 = 0, ok = false;
+  const blocked = t => !!(t.closest && t.closest('input,textarea,select,[role=switch],.camwrap,#imgwrap,.vraw'));     // 좌우 드래그를 쓰는 곳은 제외
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { ok = false; return; }
+    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+    ok = !document.querySelector('.overlay.on, #dlg.on, #dlgT.on, #expM.on') && !blocked(e.target);
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!ok) return; ok = false;
+    const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8 || Date.now() - t0 > 700) return;
+    const cur = document.querySelector('#tabs button.on'), i = cur ? ORDER.indexOf(cur.dataset.v) : -1;
+    const n = i + (dx < 0 ? 1 : -1);
+    if (i < 0 || n < 0 || n >= ORDER.length) return;
+    show(ORDER[n], dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
 document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => show(b.dataset.goto));
 show('live'); setMode(getMode());
 try { if (NATIVE && AndroidBridge.uiReady) AndroidBridge.uiReady(); } catch(e){}
@@ -760,6 +833,7 @@ function renderSettings(){
   const o = scanOpts();
   $('setDelay').replaceChildren(...SCAN_DELAYS.map(([ms, label]) => h('button', { type: 'button', 'data-ms': ms, class: ms === o.delay ? 'on' : '' }, label)));
   $('setRearm').setAttribute('aria-checked', o.rearm ? 'true' : 'false');
+  if (window.renderSettingsExtras) window.renderSettingsExtras();
   $('updMsg').textContent = '필요할 때만 확인해요. 서명이 확인된 업데이트만 적용돼요.';
   $('updApply').classList.add('hidden'); $('updCheck').disabled = false;
 }
