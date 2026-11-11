@@ -414,7 +414,7 @@ function stopScan(fin){
   if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
   if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
   $('zoom').classList.add('hidden'); $('focus').classList.add('hidden'); $('camTools').classList.add('hidden'); $('camwrap').classList.remove('on');
-  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = NATIVE ? '실시간 스캔 시작' : '실시간 스캔 (카메라 시작)';
+  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = '실시간 스캔';
   if (fin) finishWebScan();
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopScan(true); });
@@ -744,7 +744,7 @@ $('manIn').addEventListener('input', updPreview);
 
 /* ===== 시작 ===== */
 if (NATIVE) {                                                  // 앱에서는 전용 카메라 화면을 쓰므로 웹 카메라 영역은 숨김
-  $('scBtn').textContent = '실시간 스캔 시작'; $('scBtn').className = 'btn primary block'; $('pScan').className = 'btn';
+  $('scBtn').textContent = '실시간 스캔'; $('scBtn').className = 'btn primary block'; $('pScan').className = 'btn';
 }
 document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => show(b.dataset.goto));
 show('live'); setMode(getMode());
