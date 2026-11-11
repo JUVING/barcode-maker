@@ -54,7 +54,7 @@ function saveHist(list){
 }
 function persist(batch){
   const list = loadHist(), i = list.findIndex(x => x.id === batch.id);
-  const clean = { id: batch.id, time: batch.time, src: batch.src || '', items: batch.items.filter(x => x.text).map(({ text, type, fmt }) => ({ text, type, fmt })) };
+  const clean = { id: batch.id, time: batch.time, src: batch.src || '', title: batch.title || '', items: batch.items.filter(x => x.text).map(({ text, type, fmt }) => ({ text, type, fmt })) };
   if (i >= 0) list[i] = clean; else list.unshift(clean);
   saveHist(list);
 }
@@ -141,8 +141,25 @@ const V = { batch: null, idx: 0, onClose: null };
 const vSeg = makeSeg($('vSeg'), 'QR', t => { cur().type = t; redrawSlide(V.idx); syncViewer(); persistSoon(V.batch); });
 const cur = () => V.batch.items[V.idx];
 const KIND = { QR: 'QR 코드', CODE128: '바코드 (Code 128)', CODE39: '바코드 (Code 39)', EAN13: '바코드 (EAN-13)', EAN8: '바코드 (EAN-8)', UPC: '바코드 (UPC-A)', UPCE: '바코드 (UPC-E)', ITF: '바코드 (ITF)', codabar: '바코드 (Codabar)' };
+/* ----- 제목(선택): 히스토리에서 구분하기 쉽게 ----- */
+function recentTitles(){
+  const seen = new Set(), out = [];
+  for (const b of loadHist()) {
+    const t = (b.title || '').trim();
+    if (t && !seen.has(t)) { seen.add(t); out.push(t); if (out.length >= 6) break; }
+  }
+  return out;
+}
+function setTitleUi(){
+  const curTitle = (V.batch.title || '').trim();
+  $('vNameIn').value = V.batch.title || '';
+  $('vNameChips').replaceChildren(...recentTitles().filter(t => t !== curTitle).map(t =>
+    h('button', { class: 'tchip', type: 'button', onclick: () => { V.batch.title = t; persistSoon(V.batch); setTitleUi(); } }, t)));
+}
+$('vNameIn').addEventListener('input', () => { V.batch.title = $('vNameIn').value.trim().slice(0, 60); persistSoon(V.batch); });
 function openViewer(batch, idx){
   V.batch = batch; V.idx = idx || 0; persist(batch);
+  setTitleUi();
   buildSlides(); openOverlay('viewer');
   requestAnimationFrame(() => { const S = $('vSlides'); S.scrollLeft = V.idx * S.clientWidth; });
 }
@@ -280,24 +297,33 @@ $('vPng').onclick = async () => {
 /* ===== 히스토리 ===== */
 function removeBatch(id){ saveHist(loadHist().filter(b => b.id !== id)); }
 function renderHist(){
-  const list = loadHist(), L = $('histList');
-  $('histFoot').classList.toggle('hidden', !list.length);
-  if (!list.length) {
+  const all = loadHist(), L = $('histList'), q = ($('histQ').value || '').trim().toLowerCase();
+  $('histFoot').classList.toggle('hidden', !all.length);
+  $('histQ').classList.toggle('hidden', !all.length);
+  if (!all.length) {
     L.replaceChildren(h('div', { class: 'card empty' }, h('div', { class: 'ico', html: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>' }),
-      h('h3', {}, '아직 기록이 없어요'), h('p', { style: 'margin:0' }, '바코드를 만들면 여기에 묶음으로 저장돼요.')));
+      h('h3', {}, '아직 기록이 없어요'), h('p', { style: 'margin:0' }, '코드를 스캔하거나 만들면 여기에 저장돼요.')));
     return;
   }
+  const list = q ? all.filter(b => ((b.title || '') + ' ' + (b.src || '') + ' ' + b.items.map(x => x.text).join(' ')).toLowerCase().includes(q)) : all;
+  if (!list.length) { L.replaceChildren(h('div', { class: 'hint', style: 'text-align:center;padding:24px 0' }, '검색 결과가 없어요')); return; }
   L.replaceChildren(...list.map(b => {
     const thumb = h('div', { class: 'thumb' });
     if (b.items[0]) drawCode(thumb, b.items[0], false);
+    const n = b.items.length;
     const card = h('div', { class: 'hist' }, thumb,
-      h('div', { class: 'meta' }, h('b', {}, `${b.items.length}개`), b.src ? h('span', { class: 'chip', style: 'margin-left:8px' }, b.src) : null, h('small', {}, b.time), h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  '))),
-      h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 묶음을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
+      h('div', { class: 'meta' },
+        h('b', {}, b.title || `${n}개`),
+        b.src ? h('span', { class: 'chip', style: 'margin-left:8px' }, b.src) : null,
+        h('small', {}, `${b.title ? n + '개 · ' : ''}${b.time}`),
+        h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  '))),
+      h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 기록을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
         h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>' })));
-    card.onclick = () => { V.onClose = null; openViewer(b, 0); };
+    card.onclick = () => { V.onClose = () => renderHist(); openViewer(b, 0); };
     return card;
   }));
 }
+$('histQ').addEventListener('input', renderHist);
 $('histClear').onclick = async () => { if (await ask('히스토리를 모두 삭제할까요?')) { saveHist([]); renderHist(); } };
 
 /* ===== ① 스캔 (카메라로 바코드/QR 읽기) ===== */
@@ -305,7 +331,7 @@ const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, heigh
 let scStream = null, scTimer = null, scReader = null, scBusy = false;
 $('scBtn').onclick = () => { if (NATIVE) return AndroidBridge.scanLive(); if (scBusy) return; (scStream || scReader) ? stopScan(true) : startScan(); };
 const webScan = new Map();                                       // 웹 버전 실시간 스캔: 끄면 한꺼번에 결과로 보여 줌
-function onScan(t, f){ if (t && !webScan.has(t)) { webScan.set(t, f); haptic(); $('scBtn').textContent = `실시간 스캔 끄기 (${webScan.size}개)`; } }
+function onScan(t, f){ if (t && !webScan.has(t)) { webScan.clear(); webScan.set(t, f); haptic(); $('scBtn').textContent = '실시간 스캔 끄기 (읽음)'; } }
 function finishWebScan(){ const items = [...webScan].map(([text, fmt]) => ({ text, fmt })); webScan.clear(); if (items.length) showResults(items, '스캔'); }
 async function startScan(){
   scBusy = true; $('scBtn').disabled = true;

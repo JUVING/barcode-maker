@@ -67,6 +67,7 @@
 
 <!-- 히스토리 -->
 <section id="v-hist" class="view">
+  <input type="text" id="histQ" class="hidden" placeholder="검색 (제목·내용)" autocomplete="off" style="margin-bottom:8px">
   <div id="histList"></div>
   <div class="row hidden" id="histFoot" style="margin-top:14px"><button class="btn danger sm" id="histClear">히스토리 전체 삭제</button></div>
 </section>
@@ -99,6 +100,7 @@
   <div id="vSlides"></div>
   <div class="dots" id="vDots"></div>
   <div class="vinfo">
+    <div class="vtitlebox"><input type="text" id="vNameIn" maxlength="60" autocomplete="off" placeholder="제목 (선택) — 예: 1공정 입고, 라벨 점검"><div class="titlechips" id="vNameChips"></div></div>
     <div class="vkind" id="vKind"></div>
     <div class="vraw" id="vRaw"></div>
     <div class="vmeta" id="vMeta"></div>
