@@ -459,6 +459,7 @@ window.__liveUpdate = json => {
     if (liveKind === 'text') return; if (!liveActive) return; renderLive(o); if (o.done) liveOff(true); } catch(e){}
 };
 $('liveDone').onclick = () => liveOff(true);
+$('liveOff').onclick = () => liveOff(false);
 $('liveClear').onclick = () => { AndroidBridge.liveClear(); };
 $('liveTorch').onclick = () => { liveTorchOn = !liveTorchOn; AndroidBridge.liveTorch(liveTorchOn); };
 $('liveZoom').oninput = e => AndroidBridge.liveZoom(+e.target.value / 100);
