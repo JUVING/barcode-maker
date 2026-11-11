@@ -158,7 +158,11 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
     <div class="row hidden" id="camTools" style="margin-bottom:8px"><button class="btn sm" id="torchBtn">조명 켜기</button><button class="btn sm" id="afBtn">자동 초점</button></div>
     <input id="zoom" type="range" class="hidden">
     <input id="focus" type="range" class="hidden" aria-label="초점 거리">
-    <button id="scBtn" class="btn primary block">카메라 시작</button>
+    <button id="scBtn" class="btn block">실시간 스캔 (카메라 시작)</button>
+    <div class="row" style="margin-top:8px"><button id="pScan" class="btn primary">📷 찍어서 스캔 (선명)</button><button id="pGal" class="btn">앨범</button></div>
+    <input id="cam3" type="file" accept="image/*" capture="environment" hidden>
+    <input id="gal3" type="file" accept="image/*" hidden>
+    <p class="hint" style="margin:8px 2px 0">실시간 스캔이 잘 안 되면 <b>찍어서 스캔</b>을 쓰세요. 폰 기본 카메라(자동 초점·고화질)로 찍은 사진에서 코드를 모두 찾아 읽습니다.</p>
   </div>
   <div class="sec-title">읽은 코드 <span class="badge" id="liveCount">0</span><span class="sp"></span><button class="link" id="liveClear">모두 지우기</button></div>
   <div id="liveList"></div>
@@ -491,7 +495,7 @@ async function startScan(){
       scReader = new ZXing.BrowserMultiFormatReader();
       await scReader.decodeFromConstraints({ video: HQ }, v, r => { if (r) onScan(r.getText(), (ZXing.BarcodeFormat[r.getBarcodeFormat()] || '').toString()); });
     } else throw new Error('스캔 엔진을 불러오지 못했어요. 인터넷을 확인해 주세요');
-    $('camwrap').classList.add('on'); $('scBtn').textContent = '카메라 끄기';
+    $('camwrap').classList.add('on'); $('scBtn').textContent = '실시간 스캔 끄기';
     setTimeout(tuneCam, 600);
   } catch (e) {
     stopScan();
@@ -529,9 +533,52 @@ function stopScan(){
   if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
   if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
   $('zoom').classList.add('hidden'); $('focus').classList.add('hidden'); $('camTools').classList.add('hidden'); $('camwrap').classList.remove('on');
-  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = '카메라 시작';
+  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = '실시간 스캔 (카메라 시작)';
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopScan(); });
+
+/* --- 찍어서 스캔: 사진 한 장에서 코드를 전부 찾기 (전체 → 2×2 → 3×3 조각 순서로 시도) --- */
+async function detectAll(canvas){
+  const found = new Map();
+  const det = ('BarcodeDetector' in window) ? (() => { try { return new BarcodeDetector(); } catch(e){ return null; } })() : null;
+  const zx = window.ZXing ? new ZXing.BrowserMultiFormatReader() : null;
+  const add = (v, f) => { if (v && !found.has(v)) found.set(v, f); };
+  async function run(c){
+    if (det) { try { (await det.detect(c)).forEach(b => add(b.rawValue, b.format)); } catch(e){} }
+    else if (zx) {
+      try { const r = await zx.decodeFromImageUrl(c.toDataURL('image/png')); add(r.getText(), (ZXing.BarcodeFormat[r.getBarcodeFormat()] || '').toString()); } catch(e){}
+    }
+  }
+  await run(canvas);
+  for (const n of [2, 3]) {
+    const tw = canvas.width / n, th = canvas.height / n, ox = tw * 0.25, oy = th * 0.25;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const x = Math.max(0, i * tw - ox), y = Math.max(0, j * th - oy), w = Math.min(canvas.width - x, tw + 2 * ox), hh = Math.min(canvas.height - y, th + 2 * oy);
+      const t = document.createElement('canvas'); t.width = Math.round(w); t.height = Math.round(hh);
+      t.getContext('2d').drawImage(canvas, x, y, w, hh, 0, 0, t.width, t.height);
+      await run(t);
+    }
+    if (det && found.size >= 1 && n === 2) break;          // 네이티브 인식기는 한 번에 여러 개를 찾으므로 3×3 생략(속도)
+  }
+  return [...found.entries()];
+}
+let photoBusy = false;
+$('pScan').onclick = () => { if (!photoBusy) $('cam3').click(); };
+$('pGal').onclick = () => { if (!photoBusy) $('gal3').click(); };
+$('cam3').onchange = $('gal3').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f || photoBusy) return;
+  photoBusy = true; stopScan(); toast('사진에서 코드를 찾는 중…', 30000);
+  try {
+    const img = await loadImage(f), sc = Math.min(1, 3200 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const res = await detectAll(c); let added = 0;
+    res.forEach(([v, fm]) => { if (live.add(v, false, fm)) added++; });
+    if (added) { haptic(); toast(`${added}개 읽었어요`); }
+    else toast(res.length ? '이미 목록에 있는 코드예요' : '코드를 찾지 못했어요. 코드가 크게 나오게 정면에서 다시 찍어 보세요', 3600);
+  } catch(err){ toast('사진을 읽지 못했어요'); }
+  finally { photoBusy = false; }
+};
 
 /* ===== ② 사진 인식 (영역 지정 → 글자 읽기) ===== */
 const ocr = ItemList($('ocrList'), $('ocrCount'), $('ocrMake'), items => openViewer(newBatch(items)));
