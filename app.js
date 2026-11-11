@@ -148,7 +148,11 @@ function closeOverlayThen(fn){                                      // 창을 �
   else { hideOverlays(); fn(); }
 }
 // 안드로이드 뒤로가기: 열린 화면(상세/영역 지정)이 있으면 그것만 닫고, 없으면 앱 종료
-window.__back = () => { if (document.querySelector('.overlay.on')) { if (!ocrBusy) closeOverlay(); return true; } return false; };
+window.__back = () => {
+  if (document.querySelector('.overlay.on')) { if (!ocrBusy) closeOverlay(); return true; }
+  if (typeof liveActive !== 'undefined' && liveActive) { liveOff(false); return true; }          // 스캔 중 뒤로가기: 앱이 아니라 스캔만 끔
+  return false;
+};
 
 /* ===== 상세 보기 ===== */
 const V = { batch: null, idx: 0, onClose: null };
