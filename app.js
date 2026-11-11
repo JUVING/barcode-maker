@@ -104,7 +104,7 @@ function showResults(items, src){
   items = items.filter(i => i && i.text).map(i => ({ text: String(i.text), type: i.type || 'QR', warn: !!i.warn, fmt: fmtKey(i.fmt) }));
   if (!items.length) return false;
   $('toast').classList.remove('on');
-  const batch = { id: Date.now(), time: new Date().toLocaleString('ko-KR', { hour12: false }), src, items };
+  const batch = { id: Date.now(), time: new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }), src, items };
   V.onClose = null; openViewer(batch, 0);
   return true;
 }
