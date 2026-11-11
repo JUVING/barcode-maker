@@ -63,7 +63,12 @@
   </div>
 
   <div id="paneText" class="hidden">
-    <div class="card empty" style="margin-top:0">
+    <div class="card hidden" id="textCam" style="margin-top:0">
+      <div class="camwrap" id="camwrapT"></div>
+      <div class="livezoom"><span>확대</span><input id="liveZoomT" type="range" min="0" max="100" value="0" aria-label="확대"></div>
+      <div class="row"><button type="button" class="btn sm" id="liveTorchT">조명</button><button type="button" class="btn sm" id="liveCloseT">닫기</button><button type="button" class="btn sm primary" id="liveShotT">촬영해서 읽기</button></div>
+    </div>
+    <div class="card empty" id="textHero" style="margin-top:0">
       <div class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg></div>
       <h3>사진 속 글자 읽기</h3>
       <p>사진을 찍은 뒤 읽을 부분을 손가락으로 드래그해 네모로 지정하세요.<br>읽은 글자는 바로 고칠 수 있어요.</p>
