@@ -37,7 +37,7 @@ function matchRef(text, r){
   const n = ctlNorm(text);
   return lines.some(l => r.mode === 'contains' ? n.includes(l) : r.mode === 'starts' ? n.startsWith(l) : n === l);
 }
-/* 이종 검사: 한 줄에 한 그룹, '+' 로 연결 (예: A100 + A101). 그룹 안의 코드가 하나라도 읽히면 나머지도 함께 읽혀야 정상 */
+/* 이종 검사: 한 줄에 한 규칙, '+' 로 연결 (예: A100 + A101). 코드 한 개 안에 규칙의 글자가 모두 들어 있어야 정상 (규칙이 여럿이면 하나만 맞아도 정상) */
 function getPair(){ const o = store.get('bc_pair', {}); return { on: getMode() === 'pair', text: String(o.text || '') }; }       // '이종 검사' 탭일 때만 적용
 const pairGroups = p => p.text.split(/\r?\n/).map(l => l.split('+').map(s => s.trim()).filter(Boolean)).filter(g => g.length >= 2);
 window.applyRef = (items, src) => {                         // 읽은 결과에 일치 여부(ok)를 붙임 (만들기는 제외)
@@ -47,8 +47,8 @@ window.applyRef = (items, src) => {                         // 읽은 결과에 
   return items.map(i => {
     const n = ctlNorm(i.text), miss = [];
     const base = lines.length ? matchRef(i.text, r) === true : true;
-    const hit = groups.filter(g => g.some(t => n.includes(t))), unk = groups.length > 0 && !hit.length;       // 규칙에 없는 코드는 무조건 불일치
-    const lack = g => g.filter(t => !all.some(a => a.includes(t)));            // 규칙 중 하나라도 모두 갖춰지면 정상
+    const hit = groups.filter(g => g.some(t => n.includes(t))), unk = groups.length > 0 && !hit.length;       // 규칙에 없는 코드는 불일치
+    const lack = g => g.filter(t => !n.includes(t));                                                      // 코드 한 개 안에 규칙의 글자가 모두 있어야 정상
     if (hit.length && !hit.some(g => !lack(g).length)) lack(hit.slice().sort((x, y) => lack(x).length - lack(y).length)[0]).forEach(t => miss.push(t));
     return Object.assign({}, i, { ok: base && !miss.length && !unk }, miss.length ? { miss } : {}, unk ? { unk: true } : {});
   });
@@ -90,7 +90,7 @@ function renderCheck(){
   const r = getRef(), lines = refLines(r);
   const kids = [h('b', {}, it.ok ? '검사 통과' : (it.miss && it.miss.length || it.unk ? '이종 검사 불일치' : '기준값과 불일치'))];
   if (it.unk) kids.push(h('div', { class: 'cs' }, '이종 검사 규칙에 없는 코드'));
-  if (it.miss && it.miss.length) kids.push(h('div', { class: 'cs' }, '같이 읽혀야 하는 코드 없음: ' + it.miss.join(', ')));
+  if (it.miss && it.miss.length) kids.push(h('div', { class: 'cs' }, '코드 안에 없는 글자: ' + it.miss.join(', ')));
   if (it.ok === false && lines.length) kids.push(h('div', { class: 'cs' }, '기준: ' + lines.slice(0, 3).join(' / ') + (lines.length > 3 ? ' …' : '')));
   box.replaceChildren(...kids);
 }

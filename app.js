@@ -835,7 +835,7 @@ $('shotClose').onclick = () => $('shot').classList.add('hidden');
 
 /* ===== 스캔 탭: 코드 읽기 / 텍스트 읽기 전환 ===== */
 function getMode(){ try { const m = localStorage.getItem('bc_scan_mode'); return m === 'text' || m === 'pair' ? m : 'code'; } catch(e){ return 'code'; } }
-function liveSub(){ const m = getMode(); return m === 'text' ? '사진 속 글자를 읽어요' : m === 'pair' ? '정해진 코드가 모두 함께 읽혀야 정상이에요' : SUBS.live; }
+function liveSub(){ const m = getMode(); return m === 'text' ? '사진 속 글자를 읽어요' : m === 'pair' ? '코드 안에 정해진 글자가 모두 있어야 정상이에요' : SUBS.live; }
 function setMode(m){
   try { localStorage.setItem('bc_scan_mode', m); } catch(e){}
   $('paneCode').classList.toggle('hidden', m === 'text'); $('pairCard').classList.toggle('hidden', m !== 'pair');
