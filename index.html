@@ -27,7 +27,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
   font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-body{overscroll-behavior:none}
+body{overscroll-behavior:none;overflow:hidden}
 #app{max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative}
 header{padding:calc(14px + env(safe-area-inset-top)) 20px 10px;display:flex;align-items:center}
 .brand{display:flex;align-items:center;gap:12px}
@@ -35,8 +35,9 @@ header{padding:calc(14px + env(safe-area-inset-top)) 20px 10px;display:flex;alig
 .logo svg{width:22px;height:22px}
 h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.3px}
 #sub{margin:2px 0 0;font-size:12.5px;color:var(--mut)}
-main{flex:1;overflow-y:auto;padding:6px 16px 24px;-webkit-overflow-scrolling:touch}
-.view{display:none}.view.on{display:block}
+main{flex:1;min-height:0;overflow:hidden;padding:4px 16px 10px;display:flex;flex-direction:column}
+.view{display:none}.view.on{display:flex;flex-direction:column;flex:1;min-height:0}
+#liveList,#ocrList,#histList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
 nav#tabs{display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
@@ -45,12 +46,12 @@ nav#tabs button.on{color:var(--acc)}
 nav#tabs button.on svg{stroke-width:2.2}
 
 .card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin:10px 0}
-.empty{text-align:center;padding:26px 16px}
+.empty{text-align:center;padding:16px}
 .empty .ico{width:56px;height:56px;border-radius:18px;background:var(--accbg);color:var(--acc);display:grid;place-items:center;margin:0 auto 12px}
 .empty .ico svg{width:28px;height:28px}
 .empty h3{margin:0 0 4px;font-size:16px}
 .empty p{margin:0 0 14px;color:var(--mut);font-size:13px;line-height:1.5}
-.sec-title{display:flex;align-items:center;gap:8px;margin:18px 4px 8px;font-size:13.5px;font-weight:700;color:var(--mut)}
+.sec-title{flex:none;display:flex;align-items:center;gap:8px;margin:12px 4px 6px;font-size:13.5px;font-weight:700;color:var(--mut)}
 .sec-title .sp{flex:1}
 .badge{background:var(--accbg);color:var(--acc);border-radius:99px;padding:1px 9px;font-size:12px;font-weight:800}
 .link{border:0;background:none;color:var(--mut);font-size:12.5px;font-weight:600;padding:4px 2px}
@@ -72,7 +73,9 @@ nav#tabs button.on svg{stroke-width:2.2}
 input[type=text],textarea{width:100%;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:11px 12px;font-size:15px;
   font-family:ui-monospace,"SF Mono",Consolas,monospace;outline:none;transition:border-color .15s}
 input[type=text]:focus,textarea:focus{border-color:var(--acc)}
-textarea{resize:vertical;min-height:132px;line-height:1.5}
+textarea{resize:none;min-height:100px;line-height:1.5}
+#v-manual .card{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0}
+#manText{flex:1}
 input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 
 /* 항목 카드 */
@@ -88,10 +91,11 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 .iconbtn{width:38px;height:38px;border:0;background:var(--surface2);color:var(--mut);border-radius:11px;display:grid;place-items:center;flex:none}
 .iconbtn svg{width:19px;height:19px}
 
-.actionbar{position:sticky;bottom:-24px;margin:16px -16px -24px;padding:12px 16px calc(14px + 0px);background:linear-gradient(to top,var(--bg) 70%,transparent);display:flex;flex-direction:column;gap:10px}
+.actionbar{flex:none;margin:6px 0 0;padding:6px 0 0;display:flex;flex-direction:column;gap:8px}
 
 /* 카메라 */
-.camwrap{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;margin-bottom:10px}
+.camwrap{display:none;position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:16/10;margin-bottom:10px}
+.camwrap.on{display:block}
 .camwrap video{width:100%;height:100%;object-fit:cover;display:none}
 .camhint{position:absolute;inset:0;display:grid;place-items:center;color:#cbd5e1;font-size:13px;text-align:center;padding:20px;
   background:radial-gradient(circle at 50% 40%,#1e293b,#020617)}
@@ -162,7 +166,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
     <div class="row" style="margin-top:8px"><button id="pScan" class="btn primary">찍어서 스캔</button><button id="pGal" class="btn">앨범</button></div>
     <input id="cam3" type="file" accept="image/*" capture="environment" hidden>
     <input id="gal3" type="file" accept="image/*" hidden>
-    <p class="hint" style="margin:8px 2px 0">실시간 스캔이 잘 안 되면 <b>찍어서 스캔</b>을 쓰세요. 폰 기본 카메라(자동 초점·고화질)로 찍은 사진에서 코드를 모두 찾아 읽습니다.</p>
+    <p class="hint" style="margin:8px 2px 0">잘 안 읽히면 <b>찍어서 스캔</b>을 쓰세요 (폰 기본 카메라로 찍은 사진에서 코드를 모두 찾아요)</p>
   </div>
   <div class="sec-title">읽은 코드 <span class="badge" id="liveCount">0</span><span class="sp"></span><button class="link" id="liveClear">모두 지우기</button></div>
   <div id="liveList"></div>
@@ -171,7 +175,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 
 <!-- 사진 인식 -->
 <section id="v-ocr" class="view">
-  <div class="card empty" id="ocrEmpty">
+  <div class="card empty" id="ocrEmpty" style="margin-top:6px">
     <div class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
     <h3>화면을 찍어서 글자 읽기</h3>
     <p>사진을 찍은 뒤 읽을 부분을 손가락으로 드래그해 네모로 지정하세요.<br>읽은 글자는 바로 고칠 수 있어요.</p>
@@ -188,7 +192,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 <!-- 직접 입력 -->
 <section id="v-manual" class="view">
   <div class="card">
-    <p class="hint" style="margin-top:0"><b>구글 AI 사용법</b> — ① 카메라로 찍기 → ② 홈 버튼을 꾹 눌러 글자 선택·복사 → ③ 붙여넣기. 띄어쓰기와 줄바꿈 기준으로 한 줄씩 정리됩니다.</p>
+    <p class="hint" style="margin-top:0"><b>구글 AI 사용법</b> — 카메라로 찍기 → 홈 버튼 꾹 눌러 글자 복사 → 붙여넣기</p>
     <div class="row" style="margin-bottom:10px"><button class="btn" id="mCam">카메라 켜기</button><button class="btn" id="mPaste">붙여넣기</button></div>
     <input id="cam2" type="file" accept="image/*" capture="environment" hidden>
     <div id="shot" class="hidden" style="margin-bottom:10px"><img id="shotImg" alt="" style="width:100%;border-radius:12px;display:block"><button class="btn sm block" id="shotClose" style="margin-top:8px">사진 닫기</button></div>
@@ -243,6 +247,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
+const NATIVE = !!(window.AndroidBridge && AndroidBridge.hasNative && AndroidBridge.hasNative());   // 안드로이드 앱(구글 ML Kit 사용)일 때만 true
 const TYPES = [['QR', 'QR'], ['CODE128', '바코드'], ['CODE39', 'Code39']];
 // 스캔으로 알아낸 코드 종류 → [만들 때 쓸 종류, 표시 이름]
 const FMT = {
@@ -478,7 +483,7 @@ const liveSeg = makeSeg($('liveSeg'), 'QR', t => live.setType(t));
 $('liveClear').onclick = () => live.clear();
 const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } };   // 작은 QR도 읽도록 고해상도
 let scStream = null, scTimer = null, scReader = null, scBusy = false;
-$('scBtn').onclick = () => { if (scBusy) return; (scStream || scReader) ? stopScan() : startScan(); };
+$('scBtn').onclick = () => { if (NATIVE) return AndroidBridge.scanLive(); if (scBusy) return; (scStream || scReader) ? stopScan() : startScan(); };
 function onScan(t, f){ if (live.add(t, false, f)) haptic(); }
 async function startScan(){
   scBusy = true; $('scBtn').disabled = true;
@@ -537,6 +542,17 @@ function stopScan(){
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopScan(); });
 
+/* --- 안드로이드 앱: 네이티브 스캔 결과 받기 --- */
+window.__nativeScan = (json, source) => {
+  try {
+    const o = JSON.parse(json);
+    if (o.error) return toast('읽지 못했어요: ' + o.error, 3600);
+    const codes = o.codes || []; let added = 0;
+    codes.forEach(c => { if (live.add(c.text, false, c.format)) added++; });
+    if (added) toast(`${added}개 읽었어요`);
+    else if (source === 'photo') toast(codes.length ? '이미 목록에 있는 코드예요' : '코드를 찾지 못했어요. 코드가 크게 나오게 정면에서 다시 찍어 보세요', 3600);
+  } catch(e){}
+};
 /* --- 찍어서 스캔: 사진 한 장에서 코드를 전부 찾기 (전체 → 2×2 → 3×3 조각 순서로 시도) --- */
 async function detectAll(canvas){
   const found = new Map();
@@ -563,8 +579,8 @@ async function detectAll(canvas){
   return [...found.entries()];
 }
 let photoBusy = false;
-$('pScan').onclick = () => { if (!photoBusy) $('cam3').click(); };
-$('pGal').onclick = () => { if (!photoBusy) $('gal3').click(); };
+$('pScan').onclick = () => { if (NATIVE) return AndroidBridge.scanPhoto(true); if (!photoBusy) $('cam3').click(); };
+$('pGal').onclick = () => { if (NATIVE) return AndroidBridge.scanPhoto(false); if (!photoBusy) $('gal3').click(); };
 $('cam3').onchange = $('gal3').onchange = async e => {
   const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f || photoBusy) return;
   photoBusy = true; stopScan(); toast('사진에서 코드를 찾는 중…', 30000);
@@ -694,7 +710,29 @@ function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블�
   }
   return mkVariant(a, w, 0, 0, w - 1, hh - 1, delta === null ? null : otsuTh(a) + delta);
 }
+function nativeOcr(b64){
+  return new Promise((res, rej) => {
+    window.__nativeOcr = j => { try { const o = JSON.parse(j); o.error ? rej(new Error(o.error)) : res(o.lines || []); } catch(e){ rej(e); } };
+    AndroidBridge.ocr(b64);
+  });
+}
+async function ocrNative(sx, sy, sw, sh){                       // 안드로이드 앱: 구글 ML Kit 글자 인식
+  ocrBusy = true; $('selRead').disabled = true; selStatus('글자 인식 중…');
+  try {
+    const k = Math.max(1, Math.min(3, 1600 / Math.max(sw, sh)));
+    const c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+    c.getContext('2d').drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    const lines = await nativeOcr(c.toDataURL('image/jpeg', .92).split(',')[1]);
+    const found = [];
+    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase(); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
+    let added = 0; found.forEach(f => { if (ocr.add(f.text, f.warn)) added++; });
+    if (!added) { selStatus(found.length ? '이미 목록에 있는 항목이에요' : '글자를 찾지 못했어요. 영역을 다시 지정해 주세요'); $('selRead').disabled = false; return; }
+    ocrBusy = false; closeOverlay(); toast(`${added}개 추가했어요`);
+  } catch (err) { selStatus('인식 실패: ' + (err && err.message || err)); $('selRead').disabled = false; }
+  finally { ocrBusy = false; }
+}
 async function ocrRegion(sx, sy, sw, sh){
+  if (NATIVE) return ocrNative(sx, sy, sw, sh);
   ocrBusy = true; $('selRead').disabled = true; selStatus('인식 준비 중… (처음에는 데이터를 받느라 조금 걸려요)');
   try {
     const up = Math.max(1, Math.min(4, 1200 / sw));
@@ -787,6 +825,9 @@ $('manMake').onclick = () => {
 };
 
 /* ===== 시작 ===== */
+if (NATIVE) {                                                  // 앱에서는 전용 카메라 화면을 쓰므로 웹 카메라 영역은 숨김
+  $('scBtn').textContent = '실시간 스캔 시작'; $('scBtn').className = 'btn primary block'; $('pScan').className = 'btn';
+}
 show('live'); updMan();
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
