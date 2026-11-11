@@ -453,6 +453,7 @@ function renderLive(o){
   if (!n) el.textContent = '코드를 네모 안에 맞추세요';
   else if (o.ok >= 0) { const bad = n - o.ok; el.textContent = bad ? '일치 ' + o.ok + ' · 불일치 ' + bad : '일치 ' + o.ok + '개'; el.classList.add(bad ? 'bad' : 'ok'); }
   else el.textContent = (liveCollectOn ? '누적 ' : '') + n + '개 읽음';
+  if (n && o.live === false) { el.className = 'livecount'; el.textContent = n + '개 읽음 · 지금은 코드가 안 보여요'; }          // 아무것도 안 비칠 때 이전 판정이 그대로 남아 보이지 않게
   const l = $('liveList'); l.textContent = '';
   liveCodes.slice(-6).forEach(c => { const d = document.createElement('div'); d.textContent = (c.format || '').toUpperCase().replace(/_/g, ' ') + '  ' + String(c.text).replace(/\x1d/g, '<GS>').replace(/\x1e/g, '<RS>').replace(/\x04/g, '<EOT>').slice(0, 60); l.appendChild(d); });
   $('liveDone').textContent = n ? '완료 (' + n + '개)' : '완료';
