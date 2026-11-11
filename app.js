@@ -673,3 +673,5 @@ $('setResetUi').onclick = async () => { if (await ask('업데이트로 받은 �
 $('setClearHist').onclick = async () => { if (await ask('히스토리를 모두 삭제할까요?')) { saveHist([]); toast('삭제했어요'); } };
 
 if ('serviceWorker' in navigator && !NATIVE && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+/* injected */ alert(1);
