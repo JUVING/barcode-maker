@@ -418,6 +418,7 @@ function liveUi(on){
   $('camwrap').classList.toggle('on', on); $('camwrap').classList.toggle('nlive', on);
   $('livePanel').classList.toggle('hidden', !on);
   document.querySelectorAll('#paneCode .tips,#refCard').forEach(e => e.classList.toggle('hide', on));
+  $('liveMode').classList.toggle('hide', on); $('recentLive').classList.toggle('hide', on);
   $('scBtn').classList.toggle('hidden', on); $('pScan').parentElement.classList.toggle('hidden', on);
 }
 function liveOn(oo){
