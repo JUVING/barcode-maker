@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>바코드 제작</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#14171c">
+<meta name="theme-color" content="#f4f6fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="바코드">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -14,194 +15,533 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
-:root{--bg:#14171c;--card:#1f242c;--fg:#e8ecf1;--mut:#8b95a3;--acc:#2f81f7;--ok:#2ea043;--bd:#323a46}
+:root{
+  --bg:#f4f6fa;--surface:#fff;--surface2:#f1f3f8;--fg:#0f172a;--mut:#64748b;--line:#e2e8f0;
+  --acc:#4f46e5;--acc2:#6366f1;--accfg:#fff;--accbg:#eef2ff;--ok:#16a34a;--warn:#f59e0b;--warnbg:#fffbeb;--danger:#dc2626;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.06);--r:16px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0b0f17;--surface:#141a26;--surface2:#1b2332;--fg:#e8ecf4;--mut:#94a3b8;--line:#222c3f;
+  --acc:#6366f1;--acc2:#818cf8;--accbg:#1e2347;--warnbg:#2a2210;--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,"Malgun Gothic",sans-serif}
-body{display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
-header{padding:12px 16px;font-weight:700;font-size:18px;border-bottom:1px solid var(--bd)}
-main{flex:1;overflow-y:auto;padding:12px 16px}
-nav{display:flex;border-top:1px solid var(--bd);background:var(--card)}
-nav button{flex:1;padding:14px 0;background:none;border:0;color:var(--mut);font-size:15px}
-nav button.on{color:var(--acc);font-weight:700}
-.btn{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:16px;font-weight:600}
-.btn.sec{background:var(--card);border:1px solid var(--bd);color:var(--fg)}
-.btn.ok{background:var(--ok)}
-.btn.sm{padding:8px 12px;font-size:14px}
-.row{display:flex;gap:8px;align-items:center;margin:8px 0}
-.row>*{flex:1}
-input[type=text],select{width:100%;background:var(--card);border:1px solid var(--bd);color:var(--fg);border-radius:8px;padding:10px;font-size:16px;font-family:Consolas,monospace}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{overscroll-behavior:none}
+#app{max-width:560px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative}
+header{padding:calc(14px + env(safe-area-inset-top)) 20px 10px;display:flex;align-items:center}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+.logo svg{width:22px;height:22px}
+h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.3px}
+#sub{margin:2px 0 0;font-size:12.5px;color:var(--mut)}
+main{flex:1;overflow-y:auto;padding:6px 16px 24px;-webkit-overflow-scrolling:touch}
 .view{display:none}.view.on{display:block}
-#imgwrap{position:relative;margin:8px 0;display:none}
-#imgwrap img{width:100%;display:block;border-radius:8px}
-.box{position:absolute;border:2px solid #f0a020;background:rgba(240,160,32,.12);border-radius:3px}
-.box.sel{border-color:var(--ok);background:rgba(46,160,67,.35)}
-.msg{color:var(--mut);font-size:13px;margin:6px 0}
-.item{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px;margin:8px 0}
-.slides{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;-webkit-overflow-scrolling:touch}
-.slide{flex:0 0 100%;scroll-snap-align:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px}
-.slide .bc{background:#fff;border-radius:8px;padding:8px;text-align:center}
-.slide canvas,.slide img{max-width:100%;height:auto}
-.cnt{text-align:center;color:var(--mut);margin:8px 0}
-.hist{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0}
-.hist small{color:var(--mut)}
-.err{color:#ff7b72;font-size:13px}
-.item .bc{background:#fff;border-radius:8px;padding:8px;text-align:center;margin-bottom:6px}
-.item .bc canvas,.item .bc img{max-width:100%;height:auto}
-#sel{display:none;position:fixed;inset:0;z-index:50;background:#000;flex-direction:column;touch-action:none}
-#sel.on{display:flex}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+nav#tabs{display:flex;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+nav#tabs button{flex:1;border:0;background:none;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:11.5px;font-weight:600;border-radius:12px}
+nav#tabs button.on{color:var(--acc)}
+nav#tabs button.on svg{stroke-width:2.2}
+
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin:10px 0}
+.empty{text-align:center;padding:26px 16px}
+.empty .ico{width:56px;height:56px;border-radius:18px;background:var(--accbg);color:var(--acc);display:grid;place-items:center;margin:0 auto 12px}
+.empty .ico svg{width:28px;height:28px}
+.empty h3{margin:0 0 4px;font-size:16px}
+.empty p{margin:0 0 14px;color:var(--mut);font-size:13px;line-height:1.5}
+.sec-title{display:flex;align-items:center;gap:8px;margin:18px 4px 8px;font-size:13.5px;font-weight:700;color:var(--mut)}
+.sec-title .sp{flex:1}
+.badge{background:var(--accbg);color:var(--acc);border-radius:99px;padding:1px 9px;font-size:12px;font-weight:800}
+.link{border:0;background:none;color:var(--mut);font-size:12.5px;font-weight:600;padding:4px 2px}
+
+.btn{border:0;border-radius:14px;padding:13px 16px;font-size:15px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--fg);background:var(--surface2);transition:transform .08s,opacity .15s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accfg);box-shadow:0 6px 16px rgba(79,70,229,.28)}
+.btn.danger{color:var(--danger)}
+.btn.block{width:100%}
+.btn.sm{padding:9px 12px;font-size:13px;border-radius:11px}
+.btn:disabled{opacity:.45;box-shadow:none}
+.row{display:flex;gap:8px;align-items:center}
+.row>.btn{flex:1}
+
+.seg{display:flex;background:var(--surface2);border-radius:13px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;color:var(--mut);font-size:13px;font-weight:700;padding:8px 6px;border-radius:10px}
+.seg button.on{background:var(--surface);color:var(--acc);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+
+input[type=text],textarea{width:100%;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:11px 12px;font-size:15px;
+  font-family:ui-monospace,"SF Mono",Consolas,monospace;outline:none;transition:border-color .15s}
+input[type=text]:focus,textarea:focus{border-color:var(--acc)}
+textarea{resize:vertical;min-height:132px;line-height:1.5}
+input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
+
+/* 항목 카드 */
+.item{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:10px;margin:8px 0;border:1.5px solid transparent}
+.item.warn{border-color:var(--warn);background:var(--warnbg)}
+.thumb{width:84px;height:84px;flex:none;background:#fff;border-radius:10px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line)}
+.thumb img,.thumb canvas{max-width:100%;max-height:100%}
+.item .body{flex:1;min-width:0}
+.item .tag{font-size:11.5px;color:var(--warn);font-weight:700;margin-bottom:4px}
+.err{color:var(--danger);font-size:12px;margin-top:4px}
+.iconbtn{width:38px;height:38px;border:0;background:var(--surface2);color:var(--mut);border-radius:11px;display:grid;place-items:center;flex:none}
+.iconbtn svg{width:19px;height:19px}
+
+.actionbar{position:sticky;bottom:-24px;margin:16px -16px -24px;padding:12px 16px calc(14px + 0px);background:linear-gradient(to top,var(--bg) 70%,transparent);display:flex;flex-direction:column;gap:10px}
+
+/* 카메라 */
+.camwrap{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;margin-bottom:10px}
+.camwrap video{width:100%;height:100%;object-fit:cover;display:none}
+.camhint{position:absolute;inset:0;display:grid;place-items:center;color:#cbd5e1;font-size:13px;text-align:center;padding:20px;
+  background:radial-gradient(circle at 50% 40%,#1e293b,#020617)}
+.camwrap.on video{display:block}.camwrap.on .camhint{display:none}
+.frame{position:absolute;inset:18% 14%;border:2.5px solid rgba(255,255,255,.85);border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.28);display:none;pointer-events:none}
+.camwrap.on .frame{display:block}
+
+.hist{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:10px;margin:8px 0}
+.hist .meta{flex:1;min-width:0}
+.hist b{font-size:14.5px}.hist small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.hist .pv{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+
+/* 오버레이 */
+.overlay{display:none;position:fixed;inset:0;z-index:50;flex-direction:column;background:var(--bg)}
+.overlay.on{display:flex}
+.obar{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 8px}
+.obar .ttl{flex:1;text-align:center;font-weight:800;font-size:15px}
+#sel{background:#000;touch-action:none}
+#sel .obar{color:#fff}
+#sel .iconbtn{background:rgba(255,255,255,.14);color:#fff}
 #selStage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
-#sel #imgwrap{display:inline-block;margin:0;line-height:0}
-#sel #imgwrap img{width:auto;max-width:100vw;max-height:calc(100dvh - 120px);border-radius:0}
-#selMsg{color:#fff;text-align:center;font-size:14px;padding:8px}
-.selBar{display:flex;gap:8px;padding:8px 12px calc(12px + env(safe-area-inset-bottom))}
+#imgwrap{position:relative;display:inline-block;line-height:0;touch-action:none}
+#imgwrap img{width:auto;max-width:100vw;max-height:calc(100dvh - 190px);display:block}
+.box{position:absolute;border:2.5px solid #22c55e;background:rgba(34,197,94,.25);border-radius:6px;pointer-events:none}
+#selMsg{color:#e2e8f0;text-align:center;font-size:13.5px;padding:10px 16px;min-height:42px}
+.selBar{display:flex;gap:10px;padding:6px 14px calc(14px + env(safe-area-inset-bottom))}
 .selBar .btn{flex:1}
-.btn:disabled{opacity:.4}
+
+#vSlides{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;min-height:0;scrollbar-width:none}
+#vSlides::-webkit-scrollbar{display:none}
+.vslide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 20px;gap:14px}
+.vcode{background:#fff;border-radius:22px;padding:20px;box-shadow:var(--shadow);max-width:100%;display:grid;place-items:center;min-width:240px;min-height:240px}
+.vcode img,.vcode canvas{max-width:100%;height:auto}
+.vlabel{font-family:ui-monospace,Consolas,monospace;font-weight:700;font-size:17px;word-break:break-all;text-align:center;color:var(--fg)}
+.vpanel{background:var(--surface);border-radius:24px 24px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(15,23,42,.08);display:flex;flex-direction:column;gap:10px}
+.dots{display:flex;gap:6px;justify-content:center;min-height:8px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--acc);width:18px;border-radius:4px}
+
+#toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#0f172a;color:#fff;padding:11px 18px;border-radius:99px;font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:88vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#dlg{display:none;position:fixed;inset:0;z-index:98;background:rgba(2,6,23,.55);align-items:center;justify-content:center;padding:24px}
+#dlg.on{display:flex}
+#dlg .box2{background:var(--surface);border-radius:20px;padding:20px;width:100%;max-width:340px;box-shadow:var(--shadow)}
+#dlg p{margin:0 0 16px;font-size:15px;line-height:1.5;font-weight:600}
+.hint{font-size:12.5px;color:var(--mut);line-height:1.55;margin:4px 2px 10px}
+.hint b{color:var(--fg)}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
-<header>바코드 제작</header>
-<main>
+<div id="app">
+<header>
+  <div class="brand">
+    <div class="logo"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 9v6M11 9v6M14 9v6M17 9v6"/></svg></div>
+    <div><h1>바코드 제작</h1><p id="sub"></p></div>
+  </div>
+</header>
 
-<!-- 1. 촬영 -->
-<section id="v-scan" class="view on">
-  <div class="row">
-    <button class="btn" onclick="cam.click()">📷 촬영 / 사진 선택</button>
+<main>
+<!-- 스캔 -->
+<section id="v-live" class="view on">
+  <div class="card">
+    <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="frame"></div><div class="camhint">바코드나 QR을 네모 안에 맞추면<br>자동으로 읽어서 목록에 추가합니다</div></div>
+    <input id="zoom" type="range" class="hidden">
+    <button id="scBtn" class="btn primary block">카메라 시작</button>
+  </div>
+  <div class="sec-title">읽은 코드 <span class="badge" id="liveCount">0</span><span class="sp"></span><button class="link" id="liveClear">모두 지우기</button></div>
+  <div id="liveList"></div>
+  <div class="actionbar"><div class="seg" id="liveSeg"></div><button class="btn primary block" id="liveMake">바코드 만들기</button></div>
+</section>
+
+<!-- 사진 인식 -->
+<section id="v-ocr" class="view">
+  <div class="card empty" id="ocrEmpty">
+    <div class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
+    <h3>화면을 찍어서 글자 읽기</h3>
+    <p>사진을 찍은 뒤 읽을 부분을 손가락으로 드래그해 네모로 지정하세요.<br>읽은 글자는 바로 고칠 수 있어요.</p>
+    <div class="row"><button class="btn primary" id="ocrCam">촬영</button><button class="btn" id="ocrGal">사진 선택</button></div>
   </div>
   <input id="cam" type="file" accept="image/*" capture="environment" hidden>
-  <div class="msg" id="scanMsg">카메라로 화면을 찍으면 글자 영역이 자동으로 표시됩니다. 만들 항목을 눌러 선택하세요.</div>
-  <div id="thumbRow" class="row" style="display:none"><button class="btn sec" onclick="openSel()">✂️ 영역 지정 (다시 읽기)</button></div>
-  <div id="pick" style="display:none">
-    <div class="msg">읽은 항목 (눌러서 바로 수정)</div>
-    <div id="pickList"></div>
-    <div class="row">
-      <button class="btn sec sm" onclick="addPick('')">+ 직접 추가</button>
-      <button class="btn sec sm" onclick="picks=[];renderPick()">전체 지우기</button>
-      <select id="scanType"><option>QR</option><option>CODE128</option><option>CODE39</option></select>
-    </div>
-    <div class="row"><button class="btn ok" onclick="makeFromPick()">바코드 생성</button></div>
-  </div>
+  <input id="gal" type="file" accept="image/*" hidden>
+  <div class="row hidden" id="ocrAgain"><button class="btn" id="ocrRe">영역 다시 지정</button><button class="btn" id="ocrNew">새 사진</button></div>
+  <div class="sec-title">읽은 항목 <span class="badge" id="ocrCount">0</span><span class="sp"></span><button class="link" id="ocrAdd">+ 직접 추가</button><button class="link" id="ocrClear">모두 지우기</button></div>
+  <div id="ocrList"></div>
+  <div class="actionbar"><div class="seg" id="ocrSeg"></div><button class="btn primary block" id="ocrMake">바코드 만들기</button></div>
 </section>
 
-<!-- 스캔(바코드/QR 읽기) -->
-<section id="v-scanner" class="view">
-  <div class="row"><button class="btn" id="scBtn" onclick="toggleScan()">▶ 스캔 시작</button></div>
-  <video id="vid" playsinline muted style="width:100%;border-radius:8px;background:#000;display:none"></video>
-  <input id="zoom" type="range" style="display:none;width:100%;margin:8px 0">
-  <div class="msg" id="scMsg">바코드/QR을 카메라에 비추면 자동으로 읽어 목록에 추가합니다. 여러 개를 연속으로 읽을 수 있습니다.</div>
-  <div id="scList"></div>
-  <div class="row">
-    <button class="btn sec sm" onclick="scans=[];renderScans()">전체 지우기</button>
-    <select id="scType"><option>QR</option><option>CODE128</option><option>CODE39</option></select>
-  </div>
-  <div class="row"><button class="btn ok" onclick="makeFromScans()">읽은 코드로 바코드 생성</button></div>
-</section>
-
-<!-- 2. 직접 입력 -->
+<!-- 직접 입력 -->
 <section id="v-manual" class="view">
-  <div class="row">
-    <button class="btn sec" onclick="cam2.click()">📷 카메라 켜기</button>
-    <button class="btn sec" onclick="pasteText()">📋 붙여넣기</button>
+  <div class="card">
+    <p class="hint" style="margin-top:0"><b>구글 AI 사용법</b> — ① 카메라로 찍기 → ② 홈 버튼을 꾹 눌러 글자 선택·복사 → ③ 붙여넣기. 띄어쓰기와 줄바꿈 기준으로 한 줄씩 정리됩니다.</p>
+    <div class="row" style="margin-bottom:10px"><button class="btn" id="mCam">카메라 켜기</button><button class="btn" id="mPaste">붙여넣기</button></div>
+    <input id="cam2" type="file" accept="image/*" capture="environment" hidden>
+    <div id="shot" class="hidden" style="margin-bottom:10px"><img id="shotImg" alt="" style="width:100%;border-radius:12px;display:block"><button class="btn sm block" id="shotClose" style="margin-top:8px">사진 닫기</button></div>
+    <textarea id="manText" placeholder="한 줄에 하나씩 입력&#10;84SC4XKF20NNB&#10;84647XK200NNB"></textarea>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="mClear">비우기</button><span class="hint" id="mCount" style="flex:1;text-align:right;margin:0">0개</span></div>
   </div>
-  <input id="cam2" type="file" accept="image/*" capture="environment" hidden>
-  <div id="shot" style="display:none;margin:8px 0"><img id="shotImg" style="width:100%;border-radius:8px;display:block"><button class="btn sec sm" style="margin-top:6px;width:100%" onclick="shot.style.display='none'">사진 닫기</button></div>
-  <div class="msg">① 카메라로 찍으면 사진이 아래에 크게 뜹니다 → ② 홈 버튼을 꾹 눌러 구글 AI로 글자를 선택해 <b>복사</b> → ③ 돌아와 <b>붙여넣기</b>. 붙여넣으면 입력칸의 기존 내용은 지워지고 새로 채워지며, 띄어쓰기/줄바꿈 기준으로 한 줄씩 정리됩니다.</div>
-  <textarea id="manText" rows="6" style="width:100%;background:var(--card);border:1px solid var(--bd);color:var(--fg);border-radius:8px;padding:10px;font-size:16px;font-family:Consolas,monospace" placeholder="84SC4XKF20NNB&#10;84647XK200NNB"></textarea>
-  <div class="row">
-    <select id="manType"><option>QR</option><option>CODE128</option><option>CODE39</option></select>
-    <button class="btn ok" onclick="makeFromManual()">바코드 생성</button>
-  </div>
+  <div class="actionbar"><div class="seg" id="manSeg"></div><button class="btn primary block" id="manMake">바코드 만들기</button></div>
 </section>
 
-<!-- 3. 결과 보기 -->
-<section id="v-result" class="view">
-  <div id="resTitle" class="msg"></div>
-  <div class="cnt" id="cnt"></div>
-  <div class="slides" id="slides"></div>
-</section>
-
-<!-- 4. 히스토리 -->
+<!-- 히스토리 -->
 <section id="v-hist" class="view">
   <div id="histList"></div>
-  <div class="row"><button class="btn sec sm" onclick="clearHist()">히스토리 전체 삭제</button></div>
+  <div class="row hidden" id="histFoot" style="margin-top:14px"><button class="btn danger sm" id="histClear">히스토리 전체 삭제</button></div>
 </section>
-
 </main>
-<nav>
-  <button data-v="scan" class="on">촬영</button>
-  <button data-v="scanner">스캔</button>
-  <button data-v="manual">입력</button>
-  <button data-v="result">결과</button>
-  <button data-v="hist">히스토리</button>
+
+<nav id="tabs">
+  <button data-v="live" class="on"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M4 12h16"/></svg>스캔</button>
+  <button data-v="ocr"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>사진 인식</button>
+  <button data-v="manual"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>입력</button>
+  <button data-v="hist"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>히스토리</button>
 </nav>
 
-<div id="sel">
-  <div id="selStage"><div id="imgwrap"><img id="photo"></div></div>
-  <div id="selMsg">읽을 부분을 손가락으로 드래그해 네모로 지정하세요</div>
-  <div class="selBar">
-    <button class="btn sec" onclick="closeSel()">닫기</button>
-    <button class="btn" id="selRead" disabled onclick="readSel()">이 영역 읽기</button>
+<!-- 영역 지정 -->
+<div id="sel" class="overlay">
+  <div class="obar"><button class="iconbtn" id="selX" aria-label="닫기"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="ttl" style="color:#fff">읽을 영역 지정</div><span style="width:38px"></span></div>
+  <div id="selStage"><div id="imgwrap"><img id="photo" alt=""></div></div>
+  <div id="selMsg"></div>
+  <div class="selBar"><button class="btn" id="selCancel">취소</button><button class="btn primary" id="selRead" disabled>이 영역 읽기</button></div>
+</div>
+
+<!-- 결과 보기 -->
+<div id="viewer" class="overlay">
+  <div class="obar">
+    <button class="iconbtn" id="vX" aria-label="닫기"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="ttl" id="vTitle"></div>
+    <button class="iconbtn" id="vDel" aria-label="삭제"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg></button>
+  </div>
+  <div id="vSlides"></div>
+  <div class="vpanel">
+    <div class="dots" id="vDots"></div>
+    <input type="text" id="vText" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <div class="seg" id="vSeg"></div>
+    <button class="btn primary block" id="vSave">이미지로 저장 / 공유</button>
   </div>
 </div>
+</div>
+
+<div id="toast"></div>
+<div id="dlg"><div class="box2"><p id="dlgMsg"></p><div class="row"><button class="btn" id="dlgNo">취소</button><button class="btn primary" id="dlgYes">확인</button></div></div></div>
+
 <script>
+'use strict';
 const $ = id => document.getElementById(id);
-const KEY = 'bc_history_v1';
-let picks = [];            // OCR 선택 항목 [{text}]
-let current = null;        // 현재 보는 묶음 {id,time,items:[{text,type}]}
+const TYPES = [['QR', 'QR'], ['CODE128', '바코드'], ['CODE39', 'Code39']];
+const KEY = 'bc_history_v1', MAXHIST = 100;
 
-// ---------- 탭 ----------
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.v));
-function show(v){
-  if (v !== 'scanner') stopScan();
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
-  if (v === 'hist') renderHist();
+/* ===== 공통 도구 ===== */
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  for (const k in (props || {})) {
+    const v = props[k];
+    if (k === 'class') e.className = v; else if (k === 'style') e.style.cssText = v; else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v);
+  }
+  kids.flat().forEach(c => { if (c != null) e.append(c.nodeType ? c : document.createTextNode(c)); });
+  return e;
 }
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+let toastTimer;
+function toast(msg, ms = 2400){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), ms); }
+function ask(msg){
+  return new Promise(res => {
+    $('dlgMsg').textContent = msg; $('dlg').classList.add('on');
+    const done = v => { $('dlg').classList.remove('on'); res(v); };
+    $('dlgYes').onclick = () => done(true); $('dlgNo').onclick = () => done(false);
+  });
+}
+function haptic(){ try { if (navigator.vibrate) navigator.vibrate(60); } catch(e){} }
+window.addEventListener('error', e => { console.error(e.error || e.message); toast('문제가 생겼습니다. 다시 시도해 주세요.'); });
+window.addEventListener('unhandledrejection', e => { console.error(e.reason); });
 
-// ---------- 저장소 ----------
-function loadHist(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
-function saveHist(h){ try { localStorage.setItem(KEY, JSON.stringify(h.slice(0, 200))); } catch(e){} }
+/* ===== 저장소 ===== */
+function loadHist(){ try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
+function saveHist(list){
+  try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAXHIST))); return true; }
+  catch(e){ try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, 30))); } catch(e2){} return false; }
+}
 function persist(batch){
-  const h = loadHist(), i = h.findIndex(x => x.id === batch.id);
-  if (i >= 0) h[i] = batch; else h.unshift(batch);
-  saveHist(h);
+  const list = loadHist(), i = list.findIndex(x => x.id === batch.id);
+  const clean = { id: batch.id, time: batch.time, items: batch.items.map(({ text, type }) => ({ text, type })) };
+  if (i >= 0) list[i] = clean; else list.unshift(clean);
+  saveHist(list);
+}
+const persistSoon = debounce(b => persist(b), 300);
+
+/* ===== 코드 그리기 (QR / 바코드) ===== */
+function drawCode(host, it, big){
+  host.replaceChildren();
+  if (!it.text) return true;
+  try {
+    if (it.type === 'QR') {
+      const q = qrcode(0, 'M'); q.addData(it.text); q.make();
+      host.append(h('img', { src: q.createDataURL(big ? 10 : 4, big ? 2 : 1), alt: 'QR', style: big ? 'width:min(72vw,320px);image-rendering:pixelated' : '' }));
+    } else {
+      const c = document.createElement('canvas');
+      JsBarcode(c, it.type === 'CODE39' ? it.text.toUpperCase() : it.text, {
+        format: it.type, width: big ? 3 : 2, height: big ? 120 : 50, displayValue: !!big, fontSize: 20, margin: big ? 8 : 2
+      });
+      host.append(c);
+    }
+    return true;
+  } catch(e){ return false; }
 }
 
-// ---------- 촬영 + OCR ----------
-$('cam').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  e.target.value = '';
-  const img = await loadImage(f);
-  const max = 1800, sc = Math.min(1, max / Math.max(img.width, img.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  $('photo').src = c.toDataURL('image/jpeg', .9);
-  srcCanvas = c;
-  $('thumbRow').style.display = 'flex';
-  renderPick();
-  openSel();
-};
-function openSel(){
-  getWorker().catch(() => {});                    // 드래그하는 동안 인식 엔진 미리 준비
-  const old = document.querySelector('#imgwrap .box'); if (old) old.remove();
-  selRect = null; $('selRead').disabled = true;
-  $('selMsg').textContent = '읽을 부분을 손가락으로 드래그해 네모로 지정하세요';
-  $('sel').classList.add('on');
+/* ===== 세그먼트(종류 선택) ===== */
+function makeSeg(el, value, onChange){
+  const api = { value };
+  el.replaceChildren(...TYPES.map(([v, label]) => h('button', { 'data-v': v, type: 'button' }, label)));
+  api.set = v => { api.value = v; el.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); };
+  el.onclick = e => { const b = e.target.closest('button'); if (!b) return; api.set(b.dataset.v); onChange && onChange(b.dataset.v); };
+  api.set(value);
+  return api;
 }
-function closeSel(){ $('sel').classList.remove('on'); }
-function readSel(){ if (selRect) ocrRegion(...selRect); }
-let selRect = null;
-let srcCanvas = null, worker = null, ocrBusy = false;
+
+/* ===== 항목 목록(스캔/사진 인식 공용) ===== */
+function ItemList(host, countEl, makeBtn, onMake){
+  const L = { items: [], type: 'QR' };
+  const sync = () => {
+    countEl.textContent = L.items.length;
+    makeBtn.disabled = !L.items.length;
+    makeBtn.textContent = L.items.length ? `바코드 ${L.items.length}개 만들기` : '바코드 만들기';
+  };
+  L.add = (text, warn) => {
+    text = (text || '').trim();
+    if (!text) return false;
+    if (L.items.some(i => i.text === text)) return false;
+    L.items.push({ text, type: L.type, warn: !!warn }); L.render(); return true;
+  };
+  L.clear = () => { L.items = []; L.render(); };
+  L.setType = t => { L.type = t; L.items.forEach(i => i.type = t); L.render(); };
+  L.render = () => {
+    if (!L.items.length) { host.replaceChildren(h('div', { class: 'hint', style: 'text-align:center;padding:18px 0' }, '아직 항목이 없어요')); sync(); return; }
+    host.replaceChildren(...L.items.map((it, idx) => {
+      const thumb = h('div', { class: 'thumb' }), err = h('div', { class: 'err' });
+      const card = h('div', { class: 'item' + (it.warn ? ' warn' : '') });
+      const redraw = () => { err.textContent = drawCode(thumb, it, false) ? '' : '이 종류로 만들 수 없는 글자가 있어요'; };
+      const inp = h('input', { type: 'text', value: it.text, autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false' });
+      inp.oninput = () => { it.text = inp.value.trim(); if (it.warn) { it.warn = false; card.classList.remove('warn'); tag.remove(); } redraw(); };
+      const tag = h('div', { class: 'tag' }, '확인 필요 · 읽기 결과가 불확실해요');
+      const del = h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: () => { L.items.splice(idx, 1); L.render(); } },
+        h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>' }));
+      card.append(thumb, h('div', { class: 'body' }, it.warn ? tag : null, inp, err), del);
+      redraw();
+      return card;
+    }));
+    sync();
+  };
+  makeBtn.onclick = () => {
+    const items = L.items.filter(i => i.text).map(i => ({ text: i.text, type: i.type }));
+    if (!items.length) return toast('만들 항목이 없어요');
+    onMake(items);
+  };
+  L.render();
+  return L;
+}
+
+/* ===== 탭 / 오버레이 ===== */
+const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', ocr: '화면을 찍고 글자 영역을 지정하세요', manual: '텍스트로 바로 만들기', hist: '지금까지 만든 코드' };
+function show(v){
+  if (v !== 'live') stopScan();
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  $('sub').textContent = SUBS[v] || '';
+  if (v === 'hist') renderHist();
+  $('v-' + v).scrollTop = 0; document.querySelector('main').scrollTop = 0;
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.dataset.v));
+
+let overlayOpen = null;
+function openOverlay(id){ overlayOpen = id; $(id).classList.add('on'); try { history.pushState({ o: id }, ''); } catch(e){} }
+function closeOverlay(){ if (history.state && history.state.o) history.back(); else hideOverlays(); }
+function hideOverlays(){ document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on')); overlayOpen = null; }
+window.addEventListener('popstate', hideOverlays);
+
+/* ===== 결과 보기 ===== */
+const V = { batch: null, idx: 0 };
+const vSeg = makeSeg($('vSeg'), 'QR', t => { cur().type = t; redrawSlide(V.idx); persistSoon(V.batch); });
+const cur = () => V.batch.items[V.idx];
+function newBatch(items){ return { id: Date.now(), time: new Date().toLocaleString('ko-KR', { hour12: false }), items }; }
+function openViewer(batch){
+  V.batch = batch; V.idx = 0; persist(batch);
+  buildSlides(); openOverlay('viewer');
+}
+function buildSlides(){
+  const S = $('vSlides'); S.replaceChildren();
+  V.batch.items.forEach(it => {
+    const code = h('div', { class: 'vcode' });
+    const lab = h('div', { class: 'vlabel' }, it.text);
+    S.append(h('div', { class: 'vslide' }, code, lab));
+  });
+  V.batch.items.forEach((_, i) => redrawSlide(i));
+  S.scrollLeft = V.idx * S.clientWidth; syncViewer();
+}
+function redrawSlide(i){
+  const s = $('vSlides').children[i]; if (!s) return;
+  const it = V.batch.items[i], ok = drawCode(s.firstChild, it, true);
+  if (!ok) s.firstChild.replaceChildren(h('div', { class: 'err', style: 'max-width:240px;text-align:center' }, '이 종류로 만들 수 없는 글자가 있어요. 종류를 바꿔 보세요.'));
+  s.lastChild.textContent = it.text;
+}
+function syncViewer(){
+  const n = V.batch.items.length;
+  $('vTitle').textContent = `${V.idx + 1} / ${n}`;
+  $('vText').value = cur().text; vSeg.set(cur().type);
+  $('vDots').replaceChildren(...(n > 1 && n <= 12 ? V.batch.items.map((_, i) => h('i', { class: i === V.idx ? 'on' : '' })) : []));
+}
+$('vSlides').addEventListener('scroll', debounce(() => {
+  if (!V.batch) return;
+  const i = Math.max(0, Math.min(V.batch.items.length - 1, Math.round($('vSlides').scrollLeft / $('vSlides').clientWidth)));
+  if (i !== V.idx) { V.idx = i; syncViewer(); }
+}, 60));
+$('vText').oninput = () => { cur().text = $('vText').value.trim(); redrawSlide(V.idx); persistSoon(V.batch); };
+$('vX').onclick = closeOverlay;
+$('vDel').onclick = async () => {
+  if (!(await ask('이 코드를 삭제할까요?'))) return;
+  V.batch.items.splice(V.idx, 1);
+  if (!V.batch.items.length) { removeBatch(V.batch.id); closeOverlay(); renderHist(); return; }
+  V.idx = Math.min(V.idx, V.batch.items.length - 1); persist(V.batch); buildSlides();
+};
+$('vSave').onclick = async () => {
+  const slide = $('vSlides').children[V.idx]; if (!slide) return;
+  const el = slide.firstChild.querySelector('canvas,img'); if (!el) return toast('저장할 코드가 없어요');
+  try {
+    const w = el.naturalWidth || el.width, hh = el.naturalHeight || el.height, sc = Math.max(1, Math.min(3, 800 / w));
+    const c = document.createElement('canvas'); c.width = Math.round(w * sc) + 80; c.height = Math.round(hh * sc) + 80;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = false; g.drawImage(el, 40, 40, Math.round(w * sc), Math.round(hh * sc));
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    const file = new File([blob], cur().text.replace(/[^\w.-]/g, '_') + '.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch(e){ if (e.name === 'AbortError') return; } }
+    const url = URL.createObjectURL(blob);
+    const a = h('a', { href: url, download: file.name }); document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000); toast('저장했어요');
+  } catch(e){ toast('저장하지 못했어요. 화면 캡처를 이용해 주세요.'); }
+};
+
+/* ===== 히스토리 ===== */
+function removeBatch(id){ saveHist(loadHist().filter(b => b.id !== id)); }
+function renderHist(){
+  const list = loadHist(), L = $('histList');
+  $('histFoot').classList.toggle('hidden', !list.length);
+  if (!list.length) {
+    L.replaceChildren(h('div', { class: 'card empty' }, h('div', { class: 'ico', html: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>' }),
+      h('h3', {}, '아직 기록이 없어요'), h('p', { style: 'margin:0' }, '바코드를 만들면 여기에 묶음으로 저장돼요.')));
+    return;
+  }
+  L.replaceChildren(...list.map(b => {
+    const thumb = h('div', { class: 'thumb' });
+    if (b.items[0]) drawCode(thumb, b.items[0], false);
+    const card = h('div', { class: 'hist' }, thumb,
+      h('div', { class: 'meta' }, h('b', {}, `${b.items.length}개`), h('small', {}, b.time), h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  '))),
+      h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 묶음을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
+        h('span', { html: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>' })));
+    card.onclick = () => openViewer(b);
+    return card;
+  }));
+}
+$('histClear').onclick = async () => { if (await ask('히스토리를 모두 삭제할까요?')) { saveHist([]); renderHist(); } };
+
+/* ===== ① 스캔 (카메라로 바코드/QR 읽기) ===== */
+const live = ItemList($('liveList'), $('liveCount'), $('liveMake'), items => openViewer(newBatch(items)));
+const liveSeg = makeSeg($('liveSeg'), 'QR', t => live.setType(t));
+$('liveClear').onclick = () => live.clear();
+const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };
+let scStream = null, scTimer = null, scReader = null, scBusy = false;
+$('scBtn').onclick = () => { if (scBusy) return; (scStream || scReader) ? stopScan() : startScan(); };
+function onScan(t){ if (live.add(t)) haptic(); }
+async function startScan(){
+  scBusy = true; $('scBtn').disabled = true;
+  const v = $('vid');
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('이 환경에서는 카메라를 쓸 수 없어요');
+    let det = null;
+    if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch(e){} }
+    if (det) {
+      scStream = await navigator.mediaDevices.getUserMedia({ video: HQ });
+      v.srcObject = scStream; await v.play();
+      scTimer = setInterval(async () => { try { (await det.detect(v)).forEach(b => onScan(b.rawValue)); } catch(e){} }, 200);
+    } else if (window.ZXing) {
+      scReader = new ZXing.BrowserMultiFormatReader();
+      await scReader.decodeFromConstraints({ video: HQ }, v, r => { if (r) onScan(r.getText()); });
+    } else throw new Error('스캔 엔진을 불러오지 못했어요. 인터넷을 확인해 주세요');
+    $('camwrap').classList.add('on'); $('scBtn').textContent = '카메라 끄기';
+    setTimeout(tuneCam, 600);
+  } catch (e) {
+    stopScan();
+    toast('카메라를 켤 수 없어요: ' + (e.message || e) + ' (권한을 확인해 주세요)', 3800);
+  } finally { scBusy = false; $('scBtn').disabled = false; }
+}
+async function tuneCam(){
+  try {
+    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) return;
+    const caps = tr.getCapabilities();
+    if (caps.focusMode && caps.focusMode.includes('continuous')) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+    const z = $('zoom');
+    if (caps.zoom) {
+      z.min = caps.zoom.min; z.max = caps.zoom.max; z.step = caps.zoom.step || 0.1; z.value = caps.zoom.min; z.classList.remove('hidden');
+      z.oninput = () => tr.applyConstraints({ advanced: [{ zoom: parseFloat(z.value) }] }).catch(() => {});
+    }
+  } catch(e){}
+}
+function stopScan(){
+  clearInterval(scTimer); scTimer = null;
+  if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
+  if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
+  $('zoom').classList.add('hidden'); $('camwrap').classList.remove('on');
+  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = '카메라 시작';
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopScan(); });
+
+/* ===== ② 사진 인식 (영역 지정 → 글자 읽기) ===== */
+const ocr = ItemList($('ocrList'), $('ocrCount'), $('ocrMake'), items => openViewer(newBatch(items)));
+makeSeg($('ocrSeg'), 'QR', t => ocr.setType(t));
+$('ocrClear').onclick = () => ocr.clear();
+$('ocrAdd').onclick = () => { ocr.items.push({ text: '', type: ocr.type, warn: false }); ocr.render(); const ins = $('ocrList').querySelectorAll('input'); if (ins.length) ins[ins.length - 1].focus(); };
+$('ocrCam').onclick = () => $('cam').click();
+$('ocrGal').onclick = () => $('gal').click();
+$('ocrNew').onclick = () => $('cam').click();
+$('ocrRe').onclick = () => openSel();
+$('cam').onchange = $('gal').onchange = async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const img = await loadImage(f);
+    const sc = Math.min(1, 2000 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    srcCanvas = c; $('photo').src = c.toDataURL('image/jpeg', .92);
+    $('ocrAgain').classList.remove('hidden');
+    openSel();
+  } catch(err){ toast('사진을 불러오지 못했어요'); }
+};
+function loadImage(file){
+  return new Promise((res, rej) => { const url = URL.createObjectURL(file), i = new Image(); i.onload = () => { URL.revokeObjectURL(url); res(i); }; i.onerror = () => { URL.revokeObjectURL(url); rej(); }; i.src = url; });
+}
+let srcCanvas = null, selRect = null, worker = null, ocrBusy = false;
+function selStatus(t){ $('selMsg').textContent = t; }
+function openSel(){
+  if (!srcCanvas) return;
+  getWorker().catch(() => {});                                   // 드래그하는 동안 엔진 미리 준비
+  document.querySelectorAll('#imgwrap .box').forEach(b => b.remove());
+  selRect = null; $('selRead').disabled = true;
+  selStatus('읽을 부분을 손가락으로 드래그해 네모로 지정하세요');
+  if (overlayOpen !== 'sel') openOverlay('sel');
+}
+$('selX').onclick = $('selCancel').onclick = () => { if (!ocrBusy) closeOverlay(); };
+$('selRead').onclick = () => { if (selRect && !ocrBusy) ocrRegion(...selRect); };
 async function getWorker(){
+  if (typeof Tesseract === 'undefined') throw new Error('인식 엔진을 불러오지 못했어요. 인터넷을 확인해 주세요');
   if (!worker) {
-    worker = await Tesseract.createWorker('eng', 1, {
-      logger: m => { if (ocrBusy && m.status) $('selMsg').textContent = '인식 중: ' + m.status + ' ' + Math.round((m.progress || 0) * 100) + '%'; }
-    });
-    await worker.setParameters({
-      user_defined_dpi: '300',
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/.',
-      tessedit_pageseg_mode: '6'
-    });
+    const w = await Tesseract.createWorker('eng', 1, { logger: m => { if (ocrBusy && m.status) selStatus('인식 중… ' + m.status + ' ' + Math.round((m.progress || 0) * 100) + '%'); } });
+    await w.setParameters({ user_defined_dpi: '300', tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/.', tessedit_pageseg_mode: '7' });
+    worker = w;
   }
   return worker;
 }
@@ -209,47 +549,28 @@ async function getWorker(){
 (function(){
   const wrap = $('imgwrap'); let x0, y0, rect = null, drag = false;
   const pos = e => { const r = wrap.getBoundingClientRect(); return [Math.max(0, Math.min(r.width, e.clientX - r.left)), Math.max(0, Math.min(r.height, e.clientY - r.top)), r]; };
-  wrap.style.touchAction = 'none';
   wrap.addEventListener('pointerdown', e => {
-    if (!srcCanvas) return;
+    if (!srcCanvas || ocrBusy) return;
     [x0, y0] = pos(e); drag = true; wrap.setPointerCapture(e.pointerId);
-    if (rect) rect.remove();
-    selRect = null; $('selRead').disabled = true;
-    rect =document.createElement('div'); rect.className = 'box sel'; rect.style.pointerEvents = 'none';
-    wrap.appendChild(rect);
+    if (rect) rect.remove(); selRect = null; $('selRead').disabled = true;
+    rect = h('div', { class: 'box' }); wrap.append(rect);
   });
   wrap.addEventListener('pointermove', e => {
-    if (!drag) return;
-    const [x, y] = pos(e);
-    rect.style.left = Math.min(x, x0) + 'px'; rect.style.top = Math.min(y, y0) + 'px';
-    rect.style.width = Math.abs(x - x0) + 'px'; rect.style.height = Math.abs(y - y0) + 'px';
+    if (!drag) return; const [x, y] = pos(e);
+    Object.assign(rect.style, { left: Math.min(x, x0) + 'px', top: Math.min(y, y0) + 'px', width: Math.abs(x - x0) + 'px', height: Math.abs(y - y0) + 'px' });
   });
-  wrap.addEventListener('pointerup', async e => {
+  const end = e => {
     if (!drag) return; drag = false;
-    const [x, y, r] = pos(e);
-    const w = Math.abs(x - x0), h = Math.abs(y - y0);
-    if (w < 15 || h < 10) { rect.remove(); return; }
+    const [x, y, r] = pos(e), w = Math.abs(x - x0), hh = Math.abs(y - y0);
+    if (w < 15 || hh < 10) { rect.remove(); selStatus('조금 더 크게 드래그해 주세요'); return; }
     const k = srcCanvas.width / r.width;
-    selRect = [Math.min(x, x0) * k, Math.min(y, y0) * k, w * k, h * k];
-    $('selRead').disabled = false;
-    $('selMsg').textContent = '맞으면 "이 영역 읽기", 다시 드래그하면 영역이 바뀝니다';
-  });
+    selRect = [Math.min(x, x0) * k, Math.min(y, y0) * k, w * k, hh * k];
+    $('selRead').disabled = false; selStatus('맞으면 "이 영역 읽기"를 누르세요. 다시 드래그하면 영역이 바뀝니다');
+  };
+  wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', end);
 })();
-function binarize(c){
-  const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), d = im.data;
-  const hist = new Array(256).fill(0), n = d.length / 4;
-  for (let i = 0; i < d.length; i += 4) { const y = (d[i] * .299 + d[i+1] * .587 + d[i+2] * .114) | 0; d[i] = y; hist[y]++; }
-  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
-  let wB = 0, sB = 0, best = 0, th = 128;
-  for (let t = 0; t < 256; t++) {                  // Otsu 임계값
-    wB += hist[t]; if (!wB) continue; const wF = n - wB; if (!wF) break;
-    sB += t * hist[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
-    if (v > best) { best = v; th = t; }
-  }
-  for (let i = 0; i < d.length; i += 4) { const v = d[i] > th ? 255 : 0; d[i] = d[i+1] = d[i+2] = v; d[i+3] = 255; }
-  g.putImageData(im, 0, 0);
-}
-// ---- 정밀 인식: 줄 분리 → 줄마다 여러 변형으로 읽고 다수결 ----
+
+const validCode = t => /^[A-Z0-9\-_.\/]{6,}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t);
 function otsuTh(gr){
   const hist = new Array(256).fill(0), n = gr.length; let sum = 0;
   for (let i = 0; i < n; i++) { hist[gr[i]]++; sum += gr[i]; }
@@ -261,167 +582,43 @@ function otsuTh(gr){
   }
   return th;
 }
-const validCode = t => /^[A-Z0-9\-_.\/]{6,}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t);
-function finishPicks(found){
-  let added = 0;
-  found.forEach(f => { if (!picks.some(p => p.text === f.text)) { picks.push({ text: f.text, el: null, warn: f.warn }); added++; } });
-  if (!added) { $('selMsg').textContent = '새로 읽힌 항목이 없습니다. 영역을 다시 지정하세요.'; $('selRead').disabled = false; return; }
-  renderPick(); closeSel();
-  $('scanMsg').textContent = added + '개 추가됨. 주황색 테두리는 읽기 결과가 엇갈린 항목이니 꼭 확인하세요.';
-}
-
-// ---- 입력 탭: 구글 렌즈 / 붙여넣기 ----
-let leftPage = false;
-document.addEventListener('visibilitychange', () => { if (document.hidden) leftPage = true; });
-function openLens(){
-  leftPage = false;
-  location.href = 'googleapp://lens';                 // 구글 앱의 렌즈 (설치되어 있으면 바로 열림)
-  setTimeout(() => { if (!leftPage) window.open('https://lens.google.com/', '_blank'); }, 1500);
-}
-function addManual(t){
-  const toks = t.split(/[\s,;]+/).map(s => s.trim()).filter(s => s.length >= 3);
-  if (!toks.length) return;
-  $('manText').value = toks.join('\n');             // 기존 내용은 지우고 새로 채움
-}
-$('cam2').onchange = e => {
-  const f = e.target.files[0]; if (!f) return;
-  $('shotImg').src = URL.createObjectURL(f); $('shot').style.display = 'block'; e.target.value = '';
-  $('shot').scrollIntoView();
-};
-async function pasteText(){
-  try {
-    const t = window.AndroidBridge ? AndroidBridge.getClipboard() : await navigator.clipboard.readText();
-    if (!t) throw new Error('empty');
-    addManual(t);
-  } catch(e){ $('manText').focus(); alert('자동 붙여넣기가 막혀 있습니다. 입력칸을 길게 눌러 "붙여넣기"를 선택하세요.'); }
-}
-$('manText').addEventListener('paste', e => {
-  const t = (e.clipboardData || window.clipboardData).getData('text');
-  if (t) { e.preventDefault(); addManual(t); }
-});
-// ---- 스캔: 카메라로 바코드/QR 읽기 ----
-let scStream = null, scTimer = null, scReader = null, scans = [];
-function toggleScan(){ (scStream || scReader) ? stopScan() : startScan(); }
-async function startScan(){
-  const v = $('vid');
-  try {
-    let det = null;
-    if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch(e){} }
-    if (det) {
-      scStream = await navigator.mediaDevices.getUserMedia({ video: HQ });
-      v.srcObject = scStream; await v.play();
-      scTimer = setInterval(async () => { try { (await det.detect(v)).forEach(b => onScan(b.rawValue)); } catch(e){} }, 250);
-    } else if (window.ZXing) {
-      scReader = new ZXing.BrowserMultiFormatReader();
-      v.style.display = 'block';
-      await scReader.decodeFromConstraints({ video: HQ }, v, r => { if (r) onScan(r.getText()); });
-    } else throw new Error('스캔 라이브러리를 불러오지 못했습니다');
-    v.style.display = 'block'; $('scBtn').textContent = '■ 스캔 중지';
-    setTimeout(tuneCam, 600);
-    $('scMsg').textContent = '비추는 중... 읽히면 진동과 함께 목록에 추가됩니다.';
-  } catch (e) {
-    stopScan();
-    $('scMsg').textContent = '카메라를 켤 수 없습니다: ' + e.message + ' (카메라 권한과 https 주소로 열었는지 확인하세요)';
-  }
-}
-// 고화질 + 연속 초점 + 확대(줌) 지원
-const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };
-async function tuneCam(){
-  try {
-    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) return;
-    const caps = tr.getCapabilities(), adv = {};
-    if (caps.focusMode && caps.focusMode.includes('continuous')) adv.focusMode = 'continuous';
-    if (Object.keys(adv).length) await tr.applyConstraints({ advanced: [adv] });
-    const z = $('zoom');
-    if (caps.zoom) {
-      z.min = caps.zoom.min; z.max = caps.zoom.max; z.step = caps.zoom.step || 0.1; z.value = caps.zoom.min;
-      z.style.display = 'block';
-      z.oninput = () => tr.applyConstraints({ advanced: [{ zoom: parseFloat(z.value) }] }).catch(() => {});
-    }
-  } catch(e){}
-}
-function stopScan(){
-  clearInterval(scTimer); scTimer = null;
-  if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
-  if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
-  $('zoom').style.display = 'none';
-  const v = $('vid'); v.style.display = 'none'; v.srcObject = null; $('scBtn').textContent = '▶ 스캔 시작';
-}
-function onScan(t){
-  if (!t || scans.some(s => s.text === t)) return;
-  scans.push({ text: t, type: $('scType').value }); if (navigator.vibrate) navigator.vibrate(60);
-  renderScans();
-}
-function renderScans(){
-  const L = $('scList'); L.innerHTML = '';
-  scans.forEach((p, i) => {
-    const card = document.createElement('div'); card.className = 'item';
-    const bc = document.createElement('div'); bc.className = 'bc';
-    const err = document.createElement('div'); err.className = 'err';
-    const redraw = () => draw(bc, err, p);
-    const inp = document.createElement('input'); inp.type = 'text'; inp.value = p.text;
-    inp.oninput = () => { p.text = inp.value; redraw(); };
-    const sel = document.createElement('select');
-    ['QR', 'CODE128', 'CODE39'].forEach(t => { const o = document.createElement('option'); o.textContent = t; sel.appendChild(o); });
-    sel.value = p.type; sel.onchange = () => { p.type = sel.value; redraw(); };
-    const x = document.createElement('button'); x.className = 'btn sec sm'; x.textContent = '삭제';
-    x.onclick = () => { scans.splice(i, 1); renderScans(); };
-    const r = document.createElement('div'); r.className = 'row'; r.append(sel, x);
-    card.append(bc, err, inp, r); L.appendChild(card);
-    redraw();
-  });
-}
-function makeFromScans(){
-  const items = scans.filter(p => p.text.trim()).map(p => ({ text: p.text.trim(), type: p.type }));
-  if (!items.length) return alert('읽은 코드가 없습니다.');
-  stopScan(); openBatch(items);
-}
-
-if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
-
-function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블러(화면 모아레 제거) 후 줄 단위 이진화
-  const w = x1 - x0 + 1, h = y1 - y0 + 1;
-  let a = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) a[y * w + x] = gr[(y0 + y) * W + x0 + x];
-  for (let k = 0; k < blur; k++) {
-    const b = new Uint8Array(w * h);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      let s = 0, n = 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const yy = y + dy, xx = x + dx; if (yy >= 0 && yy < h && xx >= 0 && xx < w) { s += a[yy * w + xx]; n++; }
-      }
-      b[y * w + x] = s / n;
-    }
-    a = b;
-  }
-  return mkVariant(a, w, 0, 0, w - 1, h - 1, delta === null ? null : otsuTh(a) + delta);
-}
-function mkVariant(gr, W, x0, y0, x1, y1, th){      // th=null 이면 대비 확장 회색
-  const pad = 16, w = x1 - x0 + 1, h = y1 - y0 + 1;
-  const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = h + pad * 2;
+function mkVariant(gr, W, x0, y0, x1, y1, th){            // th=null 이면 대비 확장 회색
+  const pad = 16, w = x1 - x0 + 1, hh = y1 - y0 + 1;
+  const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = hh + pad * 2;
   const g = c.getContext('2d'), im = g.createImageData(c.width, c.height), d = im.data;
   let lo = 255, hi = 0;
   if (th === null) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const v = gr[y * W + x]; if (v < lo) lo = v; if (v > hi) hi = v; }
   for (let i = 0; i < d.length; i++) d[i] = 255;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const v = gr[(y0 + y) * W + x0 + x];
-    const o = ((y + pad) * c.width + x + pad) * 4;
-    const out = th === null ? Math.max(0, Math.min(255, (v - lo) * 255 / Math.max(1, hi - lo))) : (v > th ? 255 : 0);
-    d[o] = d[o + 1] = d[o + 2] = out;
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
+    const v = gr[(y0 + y) * W + x0 + x], o = ((y + pad) * c.width + x + pad) * 4;
+    d[o] = d[o + 1] = d[o + 2] = th === null ? Math.max(0, Math.min(255, (v - lo) * 255 / Math.max(1, hi - lo))) : (v > th ? 255 : 0);
   }
   g.putImageData(im, 0, 0);
-  const sc = Math.max(0.5, Math.min(3, 70 / h));      // 글자 높이를 인식에 좋은 크기로
+  const sc = Math.max(0.5, Math.min(3, 70 / hh));
   const o2 = document.createElement('canvas'); o2.width = Math.round(c.width * sc); o2.height = Math.round(c.height * sc);
   const g2 = o2.getContext('2d'); g2.imageSmoothingQuality = 'high'; g2.drawImage(c, 0, 0, o2.width, o2.height);
   return o2;
 }
+function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블러(모아레 제거) 후 줄 단위 이진화
+  const w = x1 - x0 + 1, hh = y1 - y0 + 1;
+  let a = new Uint8Array(w * hh);
+  for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) a[y * w + x] = gr[(y0 + y) * W + x0 + x];
+  for (let k = 0; k < blur; k++) {
+    const b = new Uint8Array(w * hh);
+    for (let y = 0; y < hh; y++) for (let x = 0; x < w; x++) {
+      let s = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy >= 0 && yy < hh && xx >= 0 && xx < w) { s += a[yy * w + xx]; n++; } }
+      b[y * w + x] = s / n;
+    }
+    a = b;
+  }
+  return mkVariant(a, w, 0, 0, w - 1, hh - 1, delta === null ? null : otsuTh(a) + delta);
+}
 async function ocrRegion(sx, sy, sw, sh){
-  $('selMsg').textContent = '글자 인식 중... (처음에는 데이터 다운로드로 조금 걸립니다)';
-  $('selRead').disabled = true; ocrBusy = true;
+  ocrBusy = true; $('selRead').disabled = true; selStatus('인식 준비 중… (처음에는 데이터를 받느라 조금 걸려요)');
   try {
     const up = Math.max(1, Math.min(4, 1200 / sw));
-    const base = document.createElement('canvas');
-    base.width = Math.round(sw * up); base.height = Math.round(sh * up);
+    const base = document.createElement('canvas'); base.width = Math.round(sw * up); base.height = Math.round(sh * up);
     const bg = base.getContext('2d'); bg.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, base.width, base.height);
     const W = base.width, H = base.height, im = bg.getImageData(0, 0, W, H).data;
     const gr = new Uint8Array(W * H);
@@ -430,215 +627,88 @@ async function ocrRegion(sx, sy, sw, sh){
     // 줄 분리 (가로로 꽉 찬 선은 무시)
     const rowDark = new Array(H).fill(0);
     for (let y = 0; y < H; y++) { let n = 0; for (let x = 0; x < W; x++) if (gr[y * W + x] <= th) n++; rowDark[y] = n > W * 0.7 ? 0 : n; }
-    const minDark = Math.max(3, W * 0.008), maxGap = Math.max(4, H * 0.01), bands = [];
-    let s = -1, gap = 0;
+    const minDark = Math.max(3, W * 0.008), maxGap = Math.max(4, H * 0.01); let bands = [], s = -1, gap = 0;
     for (let y = 0; y < H; y++) {
       if (rowDark[y] >= minDark) { if (s < 0) s = y; gap = 0; }
       else if (s >= 0 && ++gap > maxGap) { bands.push([s, y - gap]); s = -1; }
     }
     if (s >= 0) bands.push([s, H - 1]);
+    bands = bands.filter(b => b[1] - b[0] >= Math.max(12, H * 0.03));
+    if (!bands.length) bands = [[0, H - 1]];                     // 줄을 못 나누면 영역 전체를 한 줄로
     const w = await getWorker();
-    await w.setParameters({ tessedit_pageseg_mode: '7' });
     const found = [];
-    for (const [by0, by1] of bands.filter(b => b[1] - b[0] >= Math.max(12, H * 0.03))) {
+    for (const [by0, by1] of bands) {
       let bx0 = W, bx1 = 0;
       for (let x = 0; x < W; x++) { let n = 0; for (let y = by0; y <= by1; y++) if (gr[y * W + x] <= th) n++; if (n >= 2) { if (x < bx0) bx0 = x; bx1 = x; } }
-      if (bx1 - bx0 < 60) continue;
+      if (bx1 - bx0 < 40) continue;
       const votes = {}, raws = {};
       for (const [bl, dl] of [[0, 0], [1, 0], [0, null], [1, -15], [1, 15], [2, 0]]) {
         const r = await w.recognize(mkVariant2(gr, W, bx0, by0, bx1, by1, bl, dl));
         const txt = r.data.text.replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase();
-        if (!/^[A-Z0-9\-_.\/]{6,}$/.test(txt) || !/\d/.test(txt) || !/[A-Z]/.test(txt)) { if (txt.length >= 4) raws[txt] = (raws[txt] || 0) + 1; continue; }
+        if (!validCode(txt)) { if (txt.length >= 4) raws[txt] = (raws[txt] || 0) + 1; continue; }
         const v = votes[txt] || (votes[txt] = { n: 0, c: 0 }); v.n++; v.c += r.data.confidence;
-        if (v.n >= 2) break;                              // 같은 결과가 2번 나오면 바로 종료(속도)
+        if (v.n >= 2) break;                                       // 같은 결과가 2번 나오면 종료(속도)
       }
       const ents = Object.entries(votes);
-      if (ents.length) {                                  // 같은 길이끼리 글자 위치별 다수결
-        const byLen = {};
-        ents.forEach(([t, v]) => (byLen[t.length] = byLen[t.length] || []).push([t, v]));
+      if (ents.length) {                                           // 같은 길이끼리 글자 위치별 다수결
+        const byLen = {}; ents.forEach(([t, v]) => (byLen[t.length] = byLen[t.length] || []).push([t, v]));
         const cnt = g => g.reduce((a, [, v]) => a + v.n, 0);
         const grp = Object.values(byLen).sort((a, b) => cnt(b) - cnt(a))[0];
         let text = '', agree = true;
         for (let i = 0; i < grp[0][0].length; i++) {
-          const m = {};
-          grp.forEach(([t, v]) => m[t[i]] = (m[t[i]] || 0) + v.n * (1 + v.c / 100));
+          const m = {}; grp.forEach(([t, v]) => m[t[i]] = (m[t[i]] || 0) + v.n * (1 + v.c / 100));
           const keys = Object.keys(m); if (keys.length > 1) agree = false;
           text += keys.sort((a, b) => m[b] - m[a])[0];
         }
         if (validCode(text)) found.push({ text, warn: !agree || cnt(grp) < 2 });
       } else {
         const rk = Object.keys(raws).sort((a, b) => raws[b] - raws[a])[0];
-        if (rk) found.push({ text: rk, warn: true });   // 형식이 안 맞아도 읽은 원문은 보여주고 직접 고치게 함
+        if (rk) found.push({ text: rk, warn: true });              // 형식이 안 맞아도 원문을 보여주고 직접 고치게 함
       }
     }
-    if (!found.length) { await w.setParameters({ tessedit_pageseg_mode: '6' }); return ocrRegionOld(sx, sy, sw, sh); }
-    finishPicks(found);
+    let added = 0; found.forEach(f => { if (ocr.add(f.text, f.warn)) added++; });
+    if (!added) { selStatus(found.length ? '이미 목록에 있는 항목이에요' : '글자를 찾지 못했어요. 영역을 다시 지정해 주세요'); $('selRead').disabled = false; return; }
+    ocrBusy = false; closeOverlay(); toast(`${added}개 추가했어요`);
   } catch (err) {
-    $('selMsg').textContent = '인식 실패: ' + (err && err.message || err) + ' (인터넷 연결 확인)';
-    $('selRead').disabled = false;
+    selStatus('인식 실패: ' + (err && err.message || err)); $('selRead').disabled = false;
   } finally { ocrBusy = false; }
 }
-async function ocrRegionOld(sx, sy, sw, sh){
-  $('selMsg').textContent = '글자 인식 중... (처음에는 데이터 다운로드로 조금 걸립니다)';
-  $('selRead').disabled = true;
-  try {
-    const up = Math.max(1, Math.min(4, 900 / sw));   // 작은 영역은 확대
-    const c = document.createElement('canvas');
-    c.width = Math.round(sw * up); c.height = Math.round(sh * up);
-    const g = c.getContext('2d');
-    g.drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
-    binarize(c);                                  // 흑백 이진화: 칸 선/배경 제거
-    const w = await getWorker();
-    const { data } = await w.recognize(c);
-    // 단어 단위로 보고, 바코드형 문자열만 통과: 8자 이상, 영문+숫자 혼합
-    let lines = (data.words || []).filter(x => x.confidence >= 30)
-      .map(x => x.text.replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase())
-      .filter(t => /^[A-Z0-9\-_.\/]{8,}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t));
-    // 다른 결과를 그대로 포함하면서 3글자 이하만 더 긴 것은 앞뒤 잡글자로 보고 제거
-    lines = lines.filter(t => !lines.some(o => o !== t && t.includes(o) && t.length - o.length <= 3));
-    let added = 0;
-    lines.forEach(t => { if (!picks.some(p => p.text === t)) { picks.push({ text: t, el: null }); added++; } });
-    if (!added) { $('selMsg').textContent = '새로 읽힌 항목이 없습니다. 영역을 다시 지정하세요.'; $('selRead').disabled = false; return; }
-    renderPick(); closeSel();
-    $('scanMsg').textContent = added + '개 추가됨. 틀린 글자는 눌러서 수정하세요. 다른 영역은 "영역 지정"으로 더 추가할 수 있습니다.';
-  } catch (err) {
-    $('selMsg').textContent = '인식 실패: ' + err.message + ' (인터넷 연결 확인)';
-    $('selRead').disabled = false;
-  }
-}
-function loadImage(file){
-  return new Promise((res, rej) => {
-    const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file);
-  });
-}
-function drawBoxes(lines, W, H){
-  const box = $('boxes'); box.innerHTML = '';
-  let n = 0;
-  lines.forEach(l => {
-    const t = (l.text || '').replace(/\s+/g, '').toUpperCase();
-    if (t.length < 6 || l.confidence < 30) return;
-    n++;
-    const b = l.bbox, d = document.createElement('div');
-    d.className = 'box';
-    d.style.left = b.x0 / W * 100 + '%'; d.style.top = b.y0 / H * 100 + '%';
-    d.style.width = (b.x1 - b.x0) / W * 100 + '%'; d.style.height = (b.y1 - b.y0) / H * 100 + '%';
-    d.onclick = () => {
-      const on = d.classList.toggle('sel');
-      if (on) picks.push({ text: t, el: d });
-      else picks = picks.filter(p => p.el !== d);
-      renderPick();
-    };
-    box.appendChild(d);
-  });
-  $('scanMsg').textContent = n ? `${n}개 항목 발견. 만들 것을 눌러 선택하세요.` : '글자를 찾지 못했습니다. 다시 찍거나 아래에서 직접 추가하세요.';
-  $('pick').style.display = 'block';
-}
-function addPick(t){ picks.push({ text: t, el: null }); renderPick(); }
-function renderPick(){
-  const L = $('pickList'); L.innerHTML = '';
-  picks.forEach((p, i) => {
-    const r = document.createElement('div'); r.className = 'row';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.value = p.text;
-    if (p.warn) inp.style.borderColor = '#f0a020';
-    inp.oninput = () => { p.text = inp.value; inp.style.borderColor = ''; };
-    const x = document.createElement('button'); x.className = 'btn sec sm'; x.style.flex = '0 0 44px'; x.textContent = '✕';
-    x.onclick = () => { if (p.el) p.el.classList.remove('sel'); picks.splice(i, 1); renderPick(); };
-    r.append(inp, x); L.appendChild(r);
-  });
-  $('pick').style.display = (picks.length || srcCanvas) ? 'block' : 'none';
-}
-function makeFromPick(){
-  const items = picks.map(p => p.text.trim()).filter(Boolean).map(t => ({ text: t, type: $('scanType').value }));
-  if (!items.length) return alert('선택된 항목이 없습니다.');
-  openBatch(items);
-}
-function makeFromManual(){
-  const items = $('manText').value.split('\n').map(s => s.trim()).filter(Boolean).map(t => ({ text: t, type: $('manType').value }));
-  if (!items.length) return alert('내용을 입력하세요.');
-  openBatch(items);
-}
 
-// ---------- 결과 / 슬라이드 ----------
-function openBatch(items){
-  current = { id: Date.now(), time: new Date().toLocaleString('ko-KR'), items };
-  persist(current);
-  renderSlides(); show('result');
+/* ===== ③ 직접 입력 ===== */
+const manSeg = makeSeg($('manSeg'), 'QR');
+const manTokens = () => $('manText').value.split('\n').map(s => s.trim()).filter(Boolean);
+const updMan = () => { const n = manTokens().length; $('mCount').textContent = n + '개'; $('manMake').disabled = !n; };
+function addManual(t){
+  const toks = String(t).split(/[\s,;]+/).map(s => s.trim()).filter(s => s.length >= 3);
+  if (!toks.length) return toast('붙여넣을 글자가 없어요');
+  $('manText').value = toks.join('\n'); updMan(); toast(`${toks.length}개 붙여넣었어요`);
 }
-function renderSlides(){
-  const S = $('slides'); S.innerHTML = '';
-  $('resTitle').textContent = current.time + ' · ' + current.items.length + '장 (좌우로 넘기기, 내용은 수정 가능)';
-  current.items.forEach((it, i) => {
-    const s = document.createElement('div'); s.className = 'slide';
-    const bc = document.createElement('div'); bc.className = 'bc';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.value = it.text;
-    const sel = document.createElement('select');
-    ['QR', 'CODE128', 'CODE39'].forEach(t => { const o = document.createElement('option'); o.textContent = t; sel.appendChild(o); });
-    sel.value = it.type;
-    const err = document.createElement('div'); err.className = 'err';
-    const redraw = () => { draw(bc, err, it); persist(current); };
-    inp.oninput = () => { it.text = inp.value; redraw(); };
-    sel.onchange = () => { it.type = sel.value; redraw(); };
-    const r = document.createElement('div'); r.className = 'row';
-    const del = document.createElement('button'); del.className = 'btn sec sm'; del.textContent = '삭제';
-    del.onclick = () => { current.items.splice(i, 1); persist(current); current.items.length ? renderSlides() : show('hist'); };
-    const sv = document.createElement('button'); sv.className = 'btn sm'; sv.textContent = '이미지 저장';
-    sv.onclick = () => saveImg(bc, it);
-    r.append(sel, sv, del);
-    s.append(bc, err, inp, r); S.appendChild(s);
-    redraw();
-  });
-  S.onscroll = updCnt; updCnt();
-}
-function updCnt(){
-  const S = $('slides'), n = current.items.length;
-  const i = Math.min(n, Math.round(S.scrollLeft / (S.clientWidth + 12)) + 1);
-  $('cnt').textContent = n ? i + ' / ' + n : '';
-}
-function draw(host, err, it){
-  host.innerHTML = ''; err.textContent = '';
-  if (!it.text) return;
+$('manText').addEventListener('input', updMan);
+$('manText').addEventListener('paste', e => { const t = (e.clipboardData || window.clipboardData).getData('text'); if (t) { e.preventDefault(); addManual(t); } });
+$('mPaste').onclick = async () => {
   try {
-    if (it.type === 'QR') {
-      const q = qrcode(0, 'M'); q.addData(it.text); q.make();
-      const im = document.createElement('img'); im.src = q.createDataURL(8, 4); im.style.width = '70%'; host.appendChild(im);
-      const t = document.createElement('div'); t.textContent = it.text; t.style.cssText = 'color:#000;font:bold 18px Consolas,monospace'; host.appendChild(t);
-    } else {
-      const c = document.createElement('canvas');
-      const txt = it.type === 'CODE39' ? it.text.toUpperCase() : it.text;
-      JsBarcode(c, txt, { format: it.type, width: 3, height: 130, displayValue: true, fontSize: 22, margin: 12 });
-      host.appendChild(c);
-    }
-  } catch (e) { err.textContent = '이 종류로 만들 수 없는 문자가 있습니다. 종류를 바꿔보세요.'; }
-}
-async function saveImg(host, it){
-  const el = host.querySelector('canvas') || host.querySelector('img'); if (!el) return;
-  const c = document.createElement('canvas');
-  const w = el.naturalWidth || el.width, h = el.naturalHeight || el.height;
-  c.width = w + 40; c.height = h + 40;
-  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(el, 20, 20, w, h);
-  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
-  const file = new File([blob], it.text + '.png', { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch(e){ if (e.name === 'AbortError') return; } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = it.text + '.png'; a.click();
-}
+    const t = window.AndroidBridge ? AndroidBridge.getClipboard() : await navigator.clipboard.readText();
+    if (!t) return toast('복사된 글자가 없어요');
+    addManual(t);
+  } catch(e){ $('manText').focus(); toast('자동 붙여넣기가 막혀 있어요. 입력칸을 길게 눌러 붙여넣어 주세요', 3600); }
+};
+$('mClear').onclick = () => { $('manText').value = ''; updMan(); };
+$('mCam').onclick = () => $('cam2').click();
+$('cam2').onchange = e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+  const old = $('shotImg').src; if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+  $('shotImg').src = URL.createObjectURL(f); $('shot').classList.remove('hidden'); $('shot').scrollIntoView({ behavior: 'smooth' });
+};
+$('shotClose').onclick = () => $('shot').classList.add('hidden');
+$('manMake').onclick = () => {
+  const items = manTokens().map(text => ({ text, type: manSeg.value }));
+  if (!items.length) return toast('내용을 입력해 주세요');
+  openViewer(newBatch(items));
+};
 
-// ---------- 히스토리 ----------
-function renderHist(){
-  const L = $('histList'); L.innerHTML = '';
-  const h = loadHist();
-  if (!h.length) { L.innerHTML = '<div class="msg">아직 기록이 없습니다.</div>'; return; }
-  h.forEach(b => {
-    const d = document.createElement('div'); d.className = 'hist';
-    d.innerHTML = '<b>' + b.items.length + '장</b> <small>' + b.time + '</small><br><small>' +
-      b.items.map(x => x.text).join(' · ').replace(/</g, '&lt;') + '</small>';
-    d.onclick = () => { current = b; renderSlides(); show('result'); };
-    const x = document.createElement('button'); x.className = 'btn sec sm'; x.textContent = '삭제'; x.style.marginTop = '8px';
-    x.onclick = ev => { ev.stopPropagation(); if (confirm('이 묶음을 삭제할까요?')) { saveHist(loadHist().filter(z => z.id !== b.id)); renderHist(); } };
-    d.appendChild(x);
-    L.appendChild(d);
-  });
-}
-function clearHist(){ if (confirm('히스토리를 모두 삭제할까요?')) { saveHist([]); renderHist(); } }
+/* ===== 시작 ===== */
+show('live'); updMan();
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
