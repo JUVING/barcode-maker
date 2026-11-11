@@ -489,6 +489,7 @@ async function startScan(){
       scReader = new ZXing.BrowserMultiFormatReader();
       await scReader.decodeFromConstraints({ video: HQ }, v, r => { if (r) onScan(r.getText(), (ZXing.BarcodeFormat[r.getBarcodeFormat()] || '').toString()); });
     } else throw new Error('스캔 엔진을 불러오지 못했어요. 인터넷을 확인해 주세요');
+    console.log('DIAG BD=' + !!det + ' ZX=' + !!window.ZXing);
     $('camwrap').classList.add('on'); $('scBtn').textContent = '카메라 끄기';
     setTimeout(tuneCam, 600);
   } catch (e) {
@@ -498,8 +499,9 @@ async function startScan(){
 }
 async function tuneCam(){
   try {
-    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) return;
+    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) { console.log('DIAG no getCapabilities'); return; }
     const caps = tr.getCapabilities();
+    console.log('DIAG caps=' + JSON.stringify(caps) + ' settings=' + JSON.stringify(tr.getSettings()));
     if (caps.focusMode && caps.focusMode.includes('continuous')) await tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
     const z = $('zoom');
     if (caps.zoom) {
