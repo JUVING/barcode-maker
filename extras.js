@@ -76,6 +76,28 @@ function initRef(){
   pairSummary();
   $('pairSet').onclick = () => { $('pairIn').value = getPair().text; $('pairM').classList.add('on'); setTimeout(() => $('pairIn').focus(), 60); };
   $('pairNo').onclick = () => $('pairM').classList.remove('on');
+  $('pairClear').onclick = () => { $('pairIn').value = ''; };
+  $('pairFileBtn').onclick = () => $('pairFile').click();
+  $('pairFile').onchange = e => {                                  // CSV/텍스트 파일의 규칙을 읽어 목록에 추가 (저장을 눌러야 적용)
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    if (f.size > 2 * 1024 * 1024) return toast('파일이 너무 커요 (2MB 이하)');
+    const rd = new FileReader();
+    rd.onload = () => {
+      const rows = String(rd.result || '').replace(/^﻿/, '').split(/?
+/).map(l => l.split(/[,;	+]/).map(c => c.replace(/^"+|"+$/g, '').trim()).filter(Boolean)).filter(c => c.length >= 2);
+      if (rows.length && /^(규칙|조건|rule|rules|code|코드)$/i.test(rows[0][0])) rows.shift();         // 제목 줄은 건너뜀
+      const have = new Set($('pairIn').value.split(/?
+/).map(x => x.trim()).filter(Boolean)), add = [];
+      rows.slice(0, 3000).forEach(c => { const line = c.join(' + '); if (!have.has(line)) { have.add(line); add.push(line); } });
+      if (!add.length) return toast('불러올 규칙이 없어요. 한 줄에 글자 2개 이상이 필요해요', 3200);
+      const cur = $('pairIn').value.trim(); $('pairIn').value = (cur ? cur + '
+' : '') + add.join('
+');
+      toast(add.length + '개 규칙을 불러왔어요. 저장을 눌러야 적용돼요', 3200);
+    };
+    rd.onerror = () => toast('파일을 읽지 못했어요');
+    rd.readAsText(f, 'utf-8');
+  };
   $('pairYes').onclick = () => {
     const o = getPair(); o.text = $('pairIn').value.trim(); store.set('bc_pair', { text: o.text });
     pairSummary(); $('pairM').classList.remove('on');
