@@ -19,50 +19,68 @@
     <div class="logo"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8 9v6M11 9v6M14 9v6M17 9v6"/></svg></div>
     <div><h1>바코드 리더</h1><p id="sub"></p></div>
   </div>
-  <button class="iconbtn" id="setBtn" aria-label="설정" style="margin-left:auto"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </header>
 
 <main>
-<!-- 스캔 -->
+<!-- 스캔 (코드 읽기 / 텍스트 읽기) -->
 <section id="v-live" class="view on">
-  <div class="card">
-    <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="frame"></div><div class="camhint">바코드나 QR을 네모 안에 맞추면<br>자동으로 읽어서 목록에 추가합니다</div></div>
-    <div class="row hidden" id="camTools" style="margin-bottom:8px"><button class="btn sm" id="torchBtn">조명 켜기</button><button class="btn sm" id="afBtn">자동 초점</button></div>
-    <input id="zoom" type="range" class="hidden">
-    <input id="focus" type="range" class="hidden" aria-label="초점 거리">
-    <button id="scBtn" class="btn block">실시간 스캔 (카메라 시작)</button>
-    <div class="row" style="margin-top:8px"><button id="pScan" class="btn primary">찍어서 스캔</button><button id="pGal" class="btn">앨범</button></div>
-    <input id="cam3" type="file" accept="image/*" capture="environment" hidden>
-    <input id="gal3" type="file" accept="image/*" hidden>
-    <p class="hint" style="margin:8px 2px 0">잘 안 읽히면 <b>찍어서 스캔</b>을 쓰세요 (폰 기본 카메라로 찍은 사진에서 코드를 모두 찾아요)</p>
+  <div class="seg modeseg" id="liveMode"><button type="button" data-m="code" class="on">코드 읽기</button><button type="button" data-m="text">텍스트 읽기</button></div>
+
+  <div id="paneCode">
+    <div class="card">
+      <div class="camwrap" id="camwrap"><video id="vid" playsinline muted></video><div class="frame"></div><div class="camhint">바코드나 QR을 네모 안에 맞추면<br>자동으로 읽어서 목록에 추가합니다</div></div>
+      <div class="row hidden" id="camTools" style="margin-bottom:8px"><button class="btn sm" id="torchBtn">조명 켜기</button><button class="btn sm" id="afBtn">자동 초점</button></div>
+      <input id="zoom" type="range" class="hidden">
+      <input id="focus" type="range" class="hidden" aria-label="초점 거리">
+      <button id="scBtn" class="btn block">실시간 스캔 (카메라 시작)</button>
+      <div class="row" style="margin-top:8px"><button id="pScan" class="btn primary">찍어서 스캔</button><button id="pGal" class="btn">앨범</button></div>
+      <input id="cam3" type="file" accept="image/*" capture="environment" hidden>
+      <input id="gal3" type="file" accept="image/*" hidden>
+    </div>
+    <div class="tips">
+      <div class="tip"><span class="dot"></span><span>코드에서 <b>15~20cm</b> 떨어져 비추면 가장 잘 읽혀요</span></div>
+      <div class="tip"><span class="dot"></span><span>어두우면 <b>조명</b> 버튼을 켜고, 화면을 누르면 초점이 맞아요</span></div>
+      <div class="tip"><span class="dot"></span><span>잘 안 읽히면 <b>찍어서 스캔</b>이 더 선명해요</span></div>
+    </div>
   </div>
+
+  <div id="paneText" class="hidden">
+    <div class="card empty" style="margin-top:0">
+      <div class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 7V5h16v2M12 5v14M9 19h6"/></svg></div>
+      <h3>사진 속 글자 읽기</h3>
+      <p>사진을 찍은 뒤 읽을 부분을 손가락으로 드래그해 네모로 지정하세요.<br>읽은 글자는 바로 고칠 수 있어요.</p>
+      <div class="row"><button class="btn primary" id="ocrCam">촬영</button><button class="btn" id="ocrGal">사진 선택</button></div>
+    </div>
+    <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+    <input id="gal" type="file" accept="image/*" hidden>
+    <div class="row hidden" id="ocrAgain" style="margin-top:8px"><button class="btn" id="ocrRe">영역 다시 지정</button><button class="btn" id="ocrNew">새 사진</button></div>
+    <div class="tips">
+      <div class="tip"><span class="dot"></span><span>읽을 줄만 <b>네모로 좁게</b> 지정하면 더 정확해요</span></div>
+      <div class="tip"><span class="dot"></span><span>화면을 찍을 때는 <b>반사광</b>을 피하고 정면에서 찍으세요</span></div>
+      <div class="tip"><span class="dot"></span><span><b>0과 O, 1과 I</b>는 헷갈릴 수 있으니 결과를 꼭 확인하세요</span></div>
+    </div>
+  </div>
+
+  <div class="recentbox" id="recentLive" data-recent="스캔"></div>
   <div class="foothint">읽은 결과는 <b>히스토리</b>에 저장돼요 <button class="link" data-goto="hist">히스토리 보기</button></div>
 </section>
 
-<!-- 사진 인식 -->
-<section id="v-ocr" class="view">
-  <div class="card empty" id="ocrEmpty" style="margin-top:6px">
-    <div class="ico"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
-    <h3>화면을 찍어서 글자 읽기</h3>
-    <p>사진을 찍은 뒤 읽을 부분을 손가락으로 드래그해 네모로 지정하세요.<br>읽은 글자는 바로 고칠 수 있어요.</p>
-    <div class="row"><button class="btn primary" id="ocrCam">촬영</button><button class="btn" id="ocrGal">사진 선택</button></div>
-  </div>
-  <input id="cam" type="file" accept="image/*" capture="environment" hidden>
-  <input id="gal" type="file" accept="image/*" hidden>
-  <div class="row hidden" id="ocrAgain"><button class="btn" id="ocrRe">영역 다시 지정</button><button class="btn" id="ocrNew">새 사진</button></div>
-  <div class="foothint">읽은 결과는 <b>히스토리</b>에 저장돼요 <button class="link" data-goto="hist">히스토리 보기</button></div>
-</section>
-
-<!-- 직접 입력 -->
+<!-- 만들기 -->
 <section id="v-manual" class="view">
   <div class="card" style="flex:none">
-    <p class="hint" style="margin-top:0"><b>구글 AI 사용법</b> — 카메라로 찍기 → 홈 버튼 꾹 눌러 글자 복사 → 붙여넣기</p>
+    <div class="row"><input type="text" id="manIn" placeholder="만들 내용을 입력하세요" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="manAdd" style="flex:none">만들기</button></div>
+    <div class="t0">제어 문자 넣기 (라벨 형식 테스트용)</div>
+    <div class="ctlrow" id="ctlRow"></div>
+    <div class="manprev hidden" id="manPrev"></div>
+  </div>
+  <div class="card" style="flex:none">
+    <p class="hint" style="margin-top:0"><b>글자 가져오기</b> — 구글 AI(홈 버튼 꾹) 등에서 복사한 글자를 붙여넣어 한꺼번에 만들 수 있어요</p>
     <div class="row"><button class="btn" id="mCam">카메라 켜기</button><button class="btn" id="mPaste">붙여넣기</button></div>
     <input id="cam2" type="file" accept="image/*" capture="environment" hidden>
     <div id="shot" class="hidden" style="margin-top:10px"><img id="shotImg" alt="" style="width:100%;border-radius:12px;display:block"><button class="btn sm block" id="shotClose" style="margin-top:8px">사진 닫기</button></div>
-    <div class="row" style="margin-top:10px"><input type="text" id="manIn" placeholder="코드 내용을 입력하고 추가" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="manAdd" style="flex:none">추가</button></div>
   </div>
-  <div class="foothint">입력한 코드는 <b>히스토리</b>에 저장돼요 <button class="link" data-goto="hist">히스토리 보기</button></div>
+  <div class="recentbox" id="recentMake" data-recent="만들기"></div>
+  <div class="foothint">만든 코드는 <b>히스토리</b>에 저장돼요 <button class="link" data-goto="hist">히스토리 보기</button></div>
 </section>
 
 <!-- 히스토리 -->
@@ -71,13 +89,42 @@
   <div id="histList"></div>
   <div class="row hidden" id="histFoot" style="margin-top:14px"><button class="btn danger sm" id="histClear">히스토리 전체 삭제</button></div>
 </section>
+<!-- 설정 -->
+<section id="v-settings" class="view">
+  <div class="setbody">
+    <div class="card"><div class="t">버전</div><div class="v" id="setVer"></div></div>
+    <div class="card hidden" id="scanSetBox">
+      <div class="t">스캔 설정</div>
+      <p class="hint">실시간 스캔이 너무 빨리 연달아 읽힐 때 조절해요. 한 화면에 여러 코드가 같이 보이면 한 번에 묶어서 읽어요.</p>
+      <div class="t2">한 번 읽은 뒤 기다리는 시간 (스캔 딜레이)</div>
+      <div class="seg" id="setDelay"></div>
+      <div class="swrow"><button type="button" class="sw" id="setRearm" role="switch" aria-checked="false" aria-label="사라진 뒤 다시 보일 때만 읽기"></button><span>코드가 화면에서 <b>완전히 사라졌다가 다시 보일 때만</b> 새로 읽기</span></div>
+    </div>
+    <div class="card" id="updBox">
+      <div class="t">업데이트</div>
+      <p class="hint" id="updMsg"></p>
+      <div class="row"><button class="btn" id="updCheck">업데이트 확인</button><button class="btn primary hidden" id="updApply">업데이트 적용</button></div>
+    </div>
+    <div class="card">
+      <div class="t">보안과 개인정보</div>
+      <ul class="sec">
+        <li>찍은 사진과 읽은 코드는 <b>이 폰 밖으로 나가지 않아요</b>.</li>
+        <li>앱이 실행되는 동안 <b>외부 인터넷 접속을 막아요</b>.</li>
+        <li>업데이트는 <b>디지털 서명이 맞을 때만</b> 적용돼요.</li>
+        <li>히스토리는 이 폰에만 저장되고 백업되지 않아요.</li>
+        <li>인터넷은 <b>업데이트 확인을 누를 때만</b> 사용해요.</li>
+      </ul>
+    </div>
+    <div class="card"><div class="t">데이터</div><div class="row"><button class="btn danger" id="setClearHist">히스토리 전체 삭제</button><button class="btn hidden" id="setResetUi">기본 화면으로 되돌리기</button></div></div>
+  </div>
+</section>
 </main>
 
 <nav id="tabs">
   <button data-v="live" class="on"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M4 12h16"/></svg>스캔</button>
-  <button data-v="ocr"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>사진 인식</button>
-  <button data-v="manual"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>입력</button>
+  <button data-v="manual"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>만들기</button>
   <button data-v="hist"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>히스토리</button>
+  <button data-v="settings"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>설정</button>
 </nav>
 
 <!-- 영역 지정 -->
@@ -111,40 +158,6 @@
     <div class="seg" id="vSeg"></div>
   </div>
 </div>
-</div>
-
-<!-- 설정 -->
-<div id="settings" class="overlay">
-  <div class="obar vbar">
-    <button class="iconbtn" id="setX" aria-label="뒤로"><svg class="i" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
-    <div class="ttl">설정</div>
-  </div>
-  <div class="setbody">
-    <div class="card"><div class="t">버전</div><div class="v" id="setVer"></div></div>
-    <div class="card hidden" id="scanSetBox">
-      <div class="t">스캔 설정</div>
-      <p class="hint">실시간 스캔이 너무 빨리 연달아 읽힐 때 조절해요. 한 화면에 여러 코드가 같이 보이면 한 번에 묶어서 읽어요.</p>
-      <div class="t2">한 번 읽은 뒤 기다리는 시간 (스캔 딜레이)</div>
-      <div class="seg" id="setDelay"></div>
-      <div class="swrow"><button type="button" class="sw" id="setRearm" role="switch" aria-checked="false" aria-label="사라진 뒤 다시 보일 때만 읽기"></button><span>코드가 화면에서 <b>완전히 사라졌다가 다시 보일 때만</b> 새로 읽기</span></div>
-    </div>
-    <div class="card" id="updBox">
-      <div class="t">업데이트</div>
-      <p class="hint" id="updMsg"></p>
-      <div class="row"><button class="btn" id="updCheck">업데이트 확인</button><button class="btn primary hidden" id="updApply">업데이트 적용</button></div>
-    </div>
-    <div class="card">
-      <div class="t">보안과 개인정보</div>
-      <ul class="sec">
-        <li>찍은 사진과 읽은 코드는 <b>이 폰 밖으로 나가지 않아요</b>.</li>
-        <li>앱이 실행되는 동안 <b>외부 인터넷 접속을 막아요</b>.</li>
-        <li>업데이트는 <b>디지털 서명이 맞을 때만</b> 적용돼요.</li>
-        <li>히스토리는 이 폰에만 저장되고 백업되지 않아요.</li>
-        <li>인터넷은 <b>업데이트 확인을 누를 때만</b> 사용해요.</li>
-      </ul>
-    </div>
-    <div class="card"><div class="t">데이터</div><div class="row"><button class="btn danger" id="setClearHist">히스토리 전체 삭제</button><button class="btn hidden" id="setResetUi">기본 화면으로 되돌리기</button></div></div>
-  </div>
 </div>
 
 <div id="toast"></div>

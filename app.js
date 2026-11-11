@@ -99,7 +99,7 @@ const CTL_TXT = t => {
   }
   return f;
 };
-/* 읽은/입력한 결과는 각 탭에 남기지 않고, 바로 상세 보기로 열면서 히스토리에만 저장한다 (src: 스캔 / 사진 인식 / 입력) */
+/* 읽은/입력한 결과는 각 탭에 남기지 않고, 바로 상세 보기로 열면서 히스토리에만 저장한다 (src: 스캔 / 텍스트 인식 / 만들기) */
 function showResults(items, src){
   items = items.filter(i => i && i.text).map(i => ({ text: String(i.text), type: i.type || 'QR', warn: !!i.warn, fmt: fmtKey(i.fmt) }));
   if (!items.length) return false;
@@ -110,13 +110,17 @@ function showResults(items, src){
 }
 
 /* ===== 탭 / 오버레이 ===== */
-const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', ocr: '화면을 찍고 글자 영역을 지정하세요', manual: '글자를 넣으면 바로 코드로 보여줘요', hist: '지금까지 본 코드' };
+const SRC_ALIAS = { '입력': '만들기', '사진 인식': '텍스트 인식' };         // 옛 기록의 라벨도 새 이름으로 보여 줌
+const srcLabel = s => SRC_ALIAS[s] || s || '';
+const SUBS = { live: '바코드·QR을 비추면 자동으로 읽어요', manual: '글자를 넣으면 바로 코드로 만들어요', hist: '지금까지 본 코드', settings: '버전 · 스캔 · 보안' };
 function show(v){
   if (v !== 'live') stopScan(true);
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
-  $('sub').textContent = SUBS[v] || '';
+  $('sub').textContent = v === 'live' ? liveSub() : (SUBS[v] || '');
   if (v === 'hist') renderHist();
+  if (v === 'settings') renderSettings();
+  renderRecent();
   $('v-' + v).scrollTop = 0; document.querySelector('main').scrollTop = 0;
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.dataset.v));
@@ -125,6 +129,7 @@ let overlayOpen = null;
 function openOverlay(id){ overlayOpen = id; $(id).classList.add('on'); try { history.pushState({ o: id }, ''); } catch(e){} }
 function closeOverlay(){ if (history.state && history.state.o) history.back(); else hideOverlays(); }
 function hideOverlays(){
+  setTimeout(() => { try { renderRecent(); } catch(e){} }, 0);
   if ($('viewer').classList.contains('on') && V.onClose) { const f = V.onClose; V.onClose = null; try { f(); } catch(e){} }
   document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on')); overlayOpen = null;
 }
@@ -180,7 +185,7 @@ function syncViewer(){
   $('vKind').textContent = KIND[it.type] || it.type;
   renderRaw(it.text);
   const src = it.fmt && FMT[it.fmt] ? '읽은 종류 ' + FMT[it.fmt][1] : '직접 만든 코드';
-  $('vMeta').textContent = `${V.batch.src ? V.batch.src + ' · ' : ''}${src} · 길이 ${[...it.text].length}자`;
+  $('vMeta').textContent = `${V.batch.src ? srcLabel(V.batch.src) + ' · ' : ''}${src} · 길이 ${[...it.text].length}자`;
   if (document.activeElement !== $('vText')) $('vText').value = it.text;
   vSeg.set(it.type);
   $('vDots').replaceChildren(...(n > 1 && n <= 12 ? V.batch.items.map((_, i) => h('i', { class: i === V.idx ? 'on' : '' })) : []));
@@ -317,7 +322,7 @@ function renderHist(){
       h('h3', {}, '아직 기록이 없어요'), h('p', { style: 'margin:0' }, '코드를 스캔하거나 만들면 여기에 저장돼요.')));
     return;
   }
-  const list = q ? all.filter(b => ((b.title || '') + ' ' + (b.src || '') + ' ' + b.items.map(x => x.text).join(' ')).toLowerCase().includes(q)) : all;
+  const list = q ? all.filter(b => ((b.title || '') + ' ' + srcLabel(b.src) + ' ' + b.items.map(x => x.text).join(' ')).toLowerCase().includes(q)) : all;
   if (!list.length) { L.replaceChildren(h('div', { class: 'hint', style: 'text-align:center;padding:24px 0' }, '검색 결과가 없어요')); return; }
   L.replaceChildren(...list.map(b => {
     const thumb = h('div', { class: 'thumb' });
@@ -326,7 +331,7 @@ function renderHist(){
     const card = h('div', { class: 'hist' }, thumb,
       h('div', { class: 'meta' },
         h('b', {}, b.title || `${n}개`),
-        b.src ? h('span', { class: 'chip', style: 'margin-left:8px' }, b.src) : null,
+        b.src ? h('span', { class: 'chip', style: 'margin-left:8px' }, srcLabel(b.src)) : null,
         h('small', {}, `${b.title ? n + '개 · ' : ''}${b.time}`),
         h('div', { class: 'pv' }, b.items.map(x => x.text).join('  ·  '))),
       h('button', { class: 'iconbtn', 'aria-label': '삭제', onclick: async ev => { ev.stopPropagation(); if (await ask('이 기록을 삭제할까요?')) { removeBatch(b.id); renderHist(); } } },
@@ -593,7 +598,7 @@ async function ocrNative(sx, sy, sw, sh){                       // 안드로이�
     const found = [];
     lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase(); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
     if (!found.length) { selStatus('글자를 찾지 못했어요. 영역을 다시 지정해 주세요'); $('selRead').disabled = false; return; }
-    ocrBusy = false; closeOverlayThen(() => showResults(found.map(f => ({ text: f.text, warn: f.warn })), '사진 인식'));
+    ocrBusy = false; closeOverlayThen(() => showResults(found.map(f => ({ text: f.text, warn: f.warn })), '텍스트 인식'));
   } catch (err) { selStatus('인식 실패: ' + (err && err.message || err)); $('selRead').disabled = false; }
   finally { ocrBusy = false; }
 }
@@ -651,7 +656,7 @@ async function ocrRegion(sx, sy, sw, sh){
       }
     }
     if (!found.length) { selStatus('글자를 찾지 못했어요. 영역을 다시 지정해 주세요'); $('selRead').disabled = false; return; }
-    ocrBusy = false; closeOverlayThen(() => showResults(found.map(f => ({ text: f.text, warn: f.warn })), '사진 인식'));
+    ocrBusy = false; closeOverlayThen(() => showResults(found.map(f => ({ text: f.text, warn: f.warn })), '텍스트 인식'));
   } catch (err) {
     selStatus('인식 실패: ' + (err && err.message || err)); $('selRead').disabled = false;
   } finally { ocrBusy = false; }
@@ -661,11 +666,11 @@ async function ocrRegion(sx, sy, sw, sh){
 function addManual(t){                                           // 붙여넣기: 띄어쓰기/줄바꿈 기준으로 나눠 한 묶음으로 보여 줌
   const toks = String(t).split(/[\s,;]+/).map(s => s.trim()).filter(s => s.length >= 3);
   if (!toks.length) return toast('붙여넣을 글자가 없어요');
-  showResults(toks.map(text => ({ text })), '입력');
+  showResults(toks.map(text => ({ text })), '만들기');
 }
 $('manAdd').onclick = () => {
   const v = $('manIn').value.trim(); if (!v) return;
-  $('manIn').value = ''; showResults([{ text: v }], '입력');
+  $('manIn').value = ''; updPreview(); showResults([{ text: v }], '만들기');
 };
 $('manIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('manAdd').click(); });
 $('manIn').addEventListener('paste', e => { const t = (e.clipboardData || window.clipboardData).getData('text'); if (t && /[\s,;]/.test(t.trim())) { e.preventDefault(); addManual(t); } });
@@ -684,12 +689,65 @@ $('cam2').onchange = e => {
 };
 $('shotClose').onclick = () => $('shot').classList.add('hidden');
 
+/* ===== 스캔 탭: 코드 읽기 / 텍스트 읽기 전환 ===== */
+function getMode(){ try { return localStorage.getItem('bc_scan_mode') === 'text' ? 'text' : 'code'; } catch(e){ return 'code'; } }
+function liveSub(){ return getMode() === 'text' ? '사진 속 글자를 읽어요' : SUBS.live; }
+function setMode(m){
+  try { localStorage.setItem('bc_scan_mode', m); } catch(e){}
+  $('paneCode').classList.toggle('hidden', m !== 'code');
+  $('paneText').classList.toggle('hidden', m !== 'text');
+  $('liveMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  $('recentLive').dataset.recent = m === 'text' ? '텍스트 인식' : '스캔';
+  if (m !== 'code') stopScan(true);
+  $('sub').textContent = liveSub();
+  renderRecent();
+}
+$('liveMode').onclick = e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.m); };
+
+/* ===== 최근 기록 (각 탭 아래에 바로 열 수 있게 3개) ===== */
+function renderRecent(){
+  document.querySelectorAll('[data-recent]').forEach(box => {
+    const want = box.dataset.recent;
+    const list = loadHist().filter(b => srcLabel(b.src) === want).slice(0, 3);
+    box.replaceChildren();
+    if (!list.length) return;
+    box.append(h('div', { class: 'sec-title' }, '최근 ' + want, h('span', { class: 'sp' }), h('button', { class: 'link', onclick: () => show('hist') }, '전체 보기')),
+      ...list.map(b => {
+        const thumb = h('div', { class: 'thumb' });
+        if (b.items[0]) drawCode(thumb, b.items[0], false);
+        const n = b.items.length;
+        const card = h('div', { class: 'hist' }, thumb,
+          h('div', { class: 'meta' }, h('b', {}, b.title || b.items[0].text.slice(0, 24) || `${n}개`), h('small', {}, `${n}개 · ${b.time}`)));
+        card.onclick = () => { V.onClose = null; openViewer(b, 0); };
+        return card;
+      }));
+  });
+}
+
+/* ===== 만들기 탭: 제어 문자 넣기 + 미리보기 ===== */
+const RS = String.fromCharCode(30), GS = String.fromCharCode(29), EOT = String.fromCharCode(4);
+const CTLS = [['헤더 [)>06', '[)>' + RS + '06'], ['GS', GS], ['RS', RS], ['EOT', EOT]];
+function insertAtCaret(txt){
+  const el = $('manIn'), s = el.selectionStart == null ? el.value.length : el.selectionStart, e = el.selectionEnd == null ? s : el.selectionEnd;
+  el.value = el.value.slice(0, s) + txt + el.value.slice(e);
+  const p = s + txt.length; try { el.setSelectionRange(p, p); } catch(err){}
+  el.focus(); updPreview();
+}
+function updPreview(){
+  const v = $('manIn').value, pv = $('manPrev');
+  if (!v) { pv.classList.add('hidden'); return; }
+  pv.classList.remove('hidden');
+  pv.replaceChildren(h('span', { class: 't' }, `미리보기 · ${[...v].length}자  `), CTL_TXT(v));
+}
+$('ctlRow').replaceChildren(...CTLS.map(([label, txt]) => h('button', { type: 'button', class: 'tchip', onclick: () => insertAtCaret(txt) }, label)));
+$('manIn').addEventListener('input', updPreview);
+
 /* ===== 시작 ===== */
 if (NATIVE) {                                                  // 앱에서는 전용 카메라 화면을 쓰므로 웹 카메라 영역은 숨김
   $('scBtn').textContent = '실시간 스캔 시작'; $('scBtn').className = 'btn primary block'; $('pScan').className = 'btn';
 }
 document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => show(b.dataset.goto));
-show('live');
+show('live'); setMode(getMode());
 try { if (NATIVE && AndroidBridge.uiReady) AndroidBridge.uiReady(); } catch(e){}
 /* ===== 설정 (버전 / 업데이트 확인 / 개인정보) ===== */
 function nativeInfo(){ try { return NATIVE && AndroidBridge.versionInfo ? JSON.parse(AndroidBridge.versionInfo()) : null; } catch(e){ return null; } }
@@ -723,8 +781,6 @@ $('setDelay').onclick = e => {
   $('setDelay').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
 };
 $('setRearm').onclick = () => { const o = scanOpts(); o.rearm = !o.rearm; saveScanOpts(o); $('setRearm').setAttribute('aria-checked', o.rearm ? 'true' : 'false'); };
-$('setBtn').onclick = () => { renderSettings(); openOverlay('settings'); };
-$('setX').onclick = closeOverlay;
 $('updCheck').onclick = () => { if (!UPD.busy) { window.__updateStatus('{"state":"checking"}'); AndroidBridge.checkUpdate(); } };
 $('updApply').onclick = () => { if (!UPD.busy) { window.__updateStatus('{"state":"applying"}'); AndroidBridge.applyUpdate(); } };
 $('setResetUi').onclick = async () => { if (await ask('업데이트로 받은 화면을 지우고 앱에 들어 있는 기본 화면으로 되돌릴까요?')) AndroidBridge.resetUi(); };
