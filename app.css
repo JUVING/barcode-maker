@@ -213,11 +213,11 @@ header{align-items:center}
 .view.in-r{animation:inR .2s ease-out}.view.in-l{animation:inL .2s ease-out}
 
 /* 모달(글자 입력 / 내보내기) */
-#dlgT,#expM{display:none;position:fixed;inset:0;z-index:98;background:rgba(2,6,23,.55);align-items:center;justify-content:center;padding:24px}
-#dlgT.on,#expM.on{display:flex}
-#dlgT .box2,#expM .box2{background:var(--surface);border-radius:20px;padding:20px;width:100%;max-width:360px;box-shadow:var(--shadow)}
-#dlgT p,#expM p{margin:0 0 12px;font-size:15px;line-height:1.5;font-weight:700}
-#expM .t2{font-size:12.5px;color:var(--mut);font-weight:700;margin:10px 0 6px}
+#dlgT,#expM,#pairM{display:none;position:fixed;inset:0;z-index:98;background:rgba(2,6,23,.55);align-items:center;justify-content:center;padding:24px}
+#dlgT.on,#expM.on,#pairM.on{display:flex}
+#dlgT .box2,#expM .box2,#pairM .box2{background:var(--surface);border-radius:20px;padding:20px;width:100%;max-width:360px;box-shadow:var(--shadow)}
+#dlgT p,#expM p,#pairM p{margin:0 0 12px;font-size:15px;line-height:1.5;font-weight:700}
+#expM .t2,#pairM .t2{font-size:12.5px;color:var(--mut);font-weight:700;margin:10px 0 6px}
 
 /* 기준값 비교 */
 .refcard{flex:none}
@@ -258,3 +258,5 @@ header{align-items:center}
 .chk.on{background:var(--acc);border-color:var(--acc)}
 .sumchip{display:inline-block;border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:800;margin-left:6px}
 .sumchip.ok{background:rgba(22,163,74,.14);color:#16a34a}.sumchip.ng{background:rgba(220,38,38,.14);color:#dc2626}
+
+.pairsum{font-size:12.5px;color:var(--mut);margin-top:8px;word-break:break-all}

@@ -37,14 +37,33 @@ function matchRef(text, r){
   const n = ctlNorm(text);
   return lines.some(l => r.mode === 'contains' ? n.includes(l) : r.mode === 'starts' ? n.startsWith(l) : n === l);
 }
+/* 이종 검사: 한 줄에 한 그룹, '+' 로 연결 (예: A100 + A101). 그룹 안의 코드가 하나라도 읽히면 나머지도 함께 읽혀야 정상 */
+function getPair(){ const o = store.get('bc_pair', {}); return { on: getMode() === 'pair', text: String(o.text || '') }; }       // '이종 검사' 탭일 때만 적용
+const pairGroups = p => p.text.split(/\r?\n/).map(l => l.split('+').map(s => s.trim()).filter(Boolean)).filter(g => g.length >= 2);
 window.applyRef = (items, src) => {                         // 읽은 결과에 일치 여부(ok)를 붙임 (만들기는 제외)
-  const r = getRef();
-  if (!r.on || !refLines(r).length || src === '만들기') return items;
-  return items.map(i => Object.assign({}, i, { ok: matchRef(i.text, r) === true }));
+  const r = getRef(), p = getPair(), lines = r.on ? refLines(r) : [], groups = p.on ? pairGroups(p) : [];
+  if ((!lines.length && !groups.length) || src === '만들기') return items;
+  const all = items.map(i => ctlNorm(i.text));
+  return items.map(i => {
+    const n = ctlNorm(i.text), miss = [];
+    const base = lines.length ? matchRef(i.text, r) === true : true;
+    for (const g of groups) if (g.some(t => n.includes(t))) {                 // 여러 쌍을 한꺼번에 읽어도 되도록 '개수'가 같아야 정상
+      const cnt = g.map(t => all.filter(a => a.includes(t)).length), mx = Math.max.apply(null, cnt);
+      g.forEach((t, k) => { if (cnt[k] < mx && !miss.includes(t)) miss.push(t); });
+    }
+    return Object.assign({}, i, { ok: base && !miss.length }, miss.length ? { miss } : {});
+  });
 };
-window.refForNative = () => { const r = getRef(); return (r.on && refLines(r).length) ? { mode: r.mode, list: refLines(r) } : null; };
+window.refForNative = () => {
+  const r = getRef(), p = getPair(), lines = r.on ? refLines(r) : [], groups = p.on ? pairGroups(p) : [];
+  return (lines.length || groups.length) ? { mode: r.mode, list: lines, pairs: groups } : null;
+};
 
-(function wireRef(){
+function pairSummary(){
+  const p = getPair(), n = pairGroups(p).length;
+  $('pairSum').textContent = n ? '규칙 ' + n + '개: ' + pairGroups(p).slice(0, 2).map(g => g.join(' + ')).join(' / ') + (n > 2 ? ' …' : '') : '규칙이 없어요. 규칙 설정을 눌러 추가하세요';
+}
+function initRef(){
   const r = getRef();
   setSwitch($('refOn'), r.on); $('refBody').classList.toggle('hidden', !r.on); $('refList').value = r.list;
   $('refMode').replaceChildren(...REF_MODES.map(([v, l]) => h('button', { type: 'button', 'data-v': v, class: r.mode === v ? 'on' : '' }, l)));
@@ -55,14 +74,23 @@ window.refForNative = () => { const r = getRef(); return (r.on && refLines(r).le
     const o = getRef(); o.mode = b.dataset.v; store.set('bc_ref', o);
     $('refMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   };
-})();
+  pairSummary();
+  $('pairSet').onclick = () => { $('pairIn').value = getPair().text; $('pairM').classList.add('on'); setTimeout(() => $('pairIn').focus(), 60); };
+  $('pairNo').onclick = () => $('pairM').classList.remove('on');
+  $('pairYes').onclick = () => {
+    const o = getPair(); o.text = $('pairIn').value.trim(); store.set('bc_pair', { text: o.text });
+    pairSummary(); $('pairM').classList.remove('on');
+  };
+}
+initRef();
 
 function renderCheck(){
   const box = $('vCheck'), it = cur();
   if (it.ok === undefined) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden'); box.classList.toggle('bad', it.ok === false);
   const r = getRef(), lines = refLines(r);
-  const kids = [h('b', {}, it.ok ? '기준값과 일치' : '기준값과 불일치')];
+  const kids = [h('b', {}, it.ok ? '검사 통과' : (it.miss && it.miss.length ? '이종 검사 불일치' : '기준값과 불일치'))];
+  if (it.miss && it.miss.length) kids.push(h('div', { class: 'cs' }, '같이 읽혀야 하는 코드 없음: ' + it.miss.join(', ')));
   if (it.ok === false && lines.length) kids.push(h('div', { class: 'cs' }, '기준: ' + lines.slice(0, 3).join(' / ') + (lines.length > 3 ? ' …' : '')));
   box.replaceChildren(...kids);
 }

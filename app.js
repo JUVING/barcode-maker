@@ -417,7 +417,7 @@ function liveRectPx(){ const r = $('camwrap').getBoundingClientRect(), d = windo
 function liveUi(on){
   $('camwrap').classList.toggle('on', on); $('camwrap').classList.toggle('nlive', on);
   $('livePanel').classList.toggle('hidden', !on);
-  document.querySelectorAll('#paneCode .tips,#refCard').forEach(e => e.classList.toggle('hide', on));
+  document.querySelectorAll('#paneCode .tips,#refCard,#pairCard').forEach(e => e.classList.toggle('hide', on));
   $('liveMode').classList.toggle('hide', on); $('recentLive').classList.toggle('hide', on);
   $('scBtn').classList.toggle('hidden', on); $('pScan').parentElement.classList.toggle('hidden', on);
 }
@@ -792,15 +792,15 @@ $('cam2').onchange = e => {
 $('shotClose').onclick = () => $('shot').classList.add('hidden');
 
 /* ===== 스캔 탭: 코드 읽기 / 텍스트 읽기 전환 ===== */
-function getMode(){ try { return localStorage.getItem('bc_scan_mode') === 'text' ? 'text' : 'code'; } catch(e){ return 'code'; } }
-function liveSub(){ return getMode() === 'text' ? '사진 속 글자를 읽어요' : SUBS.live; }
+function getMode(){ try { const m = localStorage.getItem('bc_scan_mode'); return m === 'text' || m === 'pair' ? m : 'code'; } catch(e){ return 'code'; } }
+function liveSub(){ const m = getMode(); return m === 'text' ? '사진 속 글자를 읽어요' : m === 'pair' ? '정해진 코드가 모두 함께 읽혀야 정상이에요' : SUBS.live; }
 function setMode(m){
   try { localStorage.setItem('bc_scan_mode', m); } catch(e){}
-  $('paneCode').classList.toggle('hidden', m !== 'code');
+  $('paneCode').classList.toggle('hidden', m === 'text'); $('pairCard').classList.toggle('hidden', m !== 'pair');
   $('paneText').classList.toggle('hidden', m !== 'text');
   $('liveMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
   $('recentLive').dataset.recent = m === 'text' ? '텍스트 인식' : '스캔';
-  if (m !== 'code') { stopScan(true); liveOff(false); }
+  if (m === 'text') { stopScan(true); liveOff(false); }
   $('sub').textContent = liveSub();
   renderRecent();
 }

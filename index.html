@@ -24,7 +24,7 @@
 <main>
 <!-- 스캔 (코드 읽기 / 텍스트 읽기) -->
 <section id="v-live" class="view on">
-  <div class="seg modeseg" id="liveMode"><button type="button" data-m="code" class="on">코드 읽기</button><button type="button" data-m="text">텍스트 읽기</button></div>
+  <div class="seg modeseg" id="liveMode"><button type="button" data-m="code" class="on">코드 읽기</button><button type="button" data-m="text">텍스트 읽기</button><button type="button" data-m="pair">이종 검사</button></div>
 
   <div id="paneCode">
     <div class="card">
@@ -54,6 +54,11 @@
         <textarea id="refList" rows="3" spellcheck="false" autocomplete="off" placeholder="기준값 (한 줄에 하나, 하나라도 맞으면 일치)&#10;제어 문자는 &lt;GS&gt; &lt;RS&gt; &lt;EOT&gt; 로 적어요"></textarea>
         <div class="seg" id="refMode" style="margin-top:8px"></div>
       </div>
+    </div>
+    <div class="card refcard hidden" id="pairCard">
+      <div style="font-weight:800;margin-bottom:2px">이종 검사 <span class="t0s">정해진 코드가 모두 함께 읽혀야 정상</span></div>
+      <div class="pairsum" id="pairSum"></div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn sm" id="pairSet">규칙 설정</button></div>
     </div>
   </div>
 
@@ -195,6 +200,12 @@
   <div class="t2">범위</div><div class="seg" id="expScope"></div>
   <div class="swrow" id="expCtlRow"><button type="button" class="sw" id="expCtl" role="switch" aria-checked="true" aria-label="제어 문자 표시"></button><span>제어 문자를 <b>&lt;GS&gt;</b>처럼 보이게 표시</span></div>
   <div class="row" style="margin-top:14px"><button class="btn" id="expNo" type="button">닫기</button><button class="btn primary" id="expGo" type="button">보내기</button></div>
+</div></div>
+<div id="pairM"><div class="box2">
+  <p>이종 검사 규칙</p>
+  <textarea id="pairIn" rows="5" spellcheck="false" autocomplete="off" placeholder="한 줄에 한 규칙, + 로 연결&#10;A100 + A101&#10;B200 + B201 + B202"></textarea>
+  <div class="t2">그룹 안의 코드가 하나라도 읽히면, 나머지도 함께 읽혀야 정상이에요 (코드에 해당 글자가 들어 있으면 인정)</div>
+  <div class="row" style="margin-top:12px"><button class="btn" id="pairNo" type="button">취소</button><button class="btn primary" id="pairYes" type="button">저장</button></div>
 </div></div>
 <div id="toast"></div>
 <div id="dlg"><div class="box2"><p id="dlgMsg"></p><div class="row"><button class="btn" id="dlgNo">취소</button><button class="btn primary" id="dlgYes">확인</button></div></div></div>
