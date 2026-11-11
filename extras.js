@@ -47,9 +47,8 @@ window.applyRef = (items, src) => {                         // 읽은 결과에 
   return items.map(i => {
     const n = ctlNorm(i.text), miss = [];
     const base = lines.length ? matchRef(i.text, r) === true : true;
-    for (const g of groups) if (g.some(t => n.includes(t))) {                 // 여러 쌍을 한꺼번에 읽어도 되도록 '개수'가 같아야 정상
-      const cnt = g.map(t => all.filter(a => a.includes(t)).length), mx = Math.max.apply(null, cnt);
-      g.forEach((t, k) => { if (cnt[k] < mx && !miss.includes(t)) miss.push(t); });
+    for (const g of groups) if (g.some(t => n.includes(t))) {                 // 그룹 안 코드가 하나라도 있으면 나머지도 (몇 개든) 있어야 정상
+      g.forEach(t => { if (!all.some(a => a.includes(t)) && !miss.includes(t)) miss.push(t); });
     }
     return Object.assign({}, i, { ok: base && !miss.length }, miss.length ? { miss } : {});
   });
