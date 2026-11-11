@@ -48,9 +48,8 @@ window.applyRef = (items, src) => {                         // 읽은 결과에 
     const n = ctlNorm(i.text), miss = [];
     const base = lines.length ? matchRef(i.text, r) === true : true;
     const hit = groups.filter(g => g.some(t => n.includes(t))), unk = groups.length > 0 && !hit.length;       // 규칙에 없는 코드는 무조건 불일치
-    for (const g of hit) {                 // 그룹 안 코드가 하나라도 있으면 나머지도 (몇 개든) 있어야 정상
-      g.forEach(t => { if (!all.some(a => a.includes(t)) && !miss.includes(t)) miss.push(t); });
-    }
+    const lack = g => g.filter(t => !all.some(a => a.includes(t)));            // 규칙 중 하나라도 모두 갖춰지면 정상
+    if (hit.length && !hit.some(g => !lack(g).length)) lack(hit.slice().sort((x, y) => lack(x).length - lack(y).length)[0]).forEach(t => miss.push(t));
     return Object.assign({}, i, { ok: base && !miss.length && !unk }, miss.length ? { miss } : {}, unk ? { unk: true } : {});
   });
 };
