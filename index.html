@@ -538,7 +538,7 @@ function stopScan(){
   if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
   if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
   $('zoom').classList.add('hidden'); $('focus').classList.add('hidden'); $('camTools').classList.add('hidden'); $('camwrap').classList.remove('on');
-  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = '실시간 스캔 (카메라 시작)';
+  const v = $('vid'); try { v.pause(); } catch(e){} v.srcObject = null; $('scBtn').textContent = NATIVE ? '실시간 스캔 시작' : '실시간 스캔 (카메라 시작)';
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopScan(); });
 
