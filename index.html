@@ -86,6 +86,7 @@ input[type=text],select{width:100%;background:var(--card);border:1px solid var(-
 <section id="v-scanner" class="view">
   <div class="row"><button class="btn" id="scBtn" onclick="toggleScan()">▶ 스캔 시작</button></div>
   <video id="vid" playsinline muted style="width:100%;border-radius:8px;background:#000;display:none"></video>
+  <input id="zoom" type="range" style="display:none;width:100%;margin:8px 0">
   <div class="msg" id="scMsg">바코드/QR을 카메라에 비추면 자동으로 읽어 목록에 추가합니다. 여러 개를 연속으로 읽을 수 있습니다.</div>
   <div id="scList"></div>
   <div class="row">
@@ -307,25 +308,43 @@ async function startScan(){
     let det = null;
     if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch(e){} }
     if (det) {
-      scStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+      scStream = await navigator.mediaDevices.getUserMedia({ video: HQ });
       v.srcObject = scStream; await v.play();
       scTimer = setInterval(async () => { try { (await det.detect(v)).forEach(b => onScan(b.rawValue)); } catch(e){} }, 250);
     } else if (window.ZXing) {
       scReader = new ZXing.BrowserMultiFormatReader();
       v.style.display = 'block';
-      await scReader.decodeFromConstraints({ video: { facingMode: 'environment' } }, v, r => { if (r) onScan(r.getText()); });
+      await scReader.decodeFromConstraints({ video: HQ }, v, r => { if (r) onScan(r.getText()); });
     } else throw new Error('스캔 라이브러리를 불러오지 못했습니다');
     v.style.display = 'block'; $('scBtn').textContent = '■ 스캔 중지';
+    setTimeout(tuneCam, 600);
     $('scMsg').textContent = '비추는 중... 읽히면 진동과 함께 목록에 추가됩니다.';
   } catch (e) {
     stopScan();
     $('scMsg').textContent = '카메라를 켤 수 없습니다: ' + e.message + ' (카메라 권한과 https 주소로 열었는지 확인하세요)';
   }
 }
+// 고화질 + 연속 초점 + 확대(줌) 지원
+const HQ = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } };
+async function tuneCam(){
+  try {
+    const tr = $('vid').srcObject && $('vid').srcObject.getVideoTracks()[0]; if (!tr || !tr.getCapabilities) return;
+    const caps = tr.getCapabilities(), adv = {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) adv.focusMode = 'continuous';
+    if (Object.keys(adv).length) await tr.applyConstraints({ advanced: [adv] });
+    const z = $('zoom');
+    if (caps.zoom) {
+      z.min = caps.zoom.min; z.max = caps.zoom.max; z.step = caps.zoom.step || 0.1; z.value = caps.zoom.min;
+      z.style.display = 'block';
+      z.oninput = () => tr.applyConstraints({ advanced: [{ zoom: parseFloat(z.value) }] }).catch(() => {});
+    }
+  } catch(e){}
+}
 function stopScan(){
   clearInterval(scTimer); scTimer = null;
   if (scStream) { scStream.getTracks().forEach(t => t.stop()); scStream = null; }
   if (scReader) { try { scReader.reset(); } catch(e){} scReader = null; }
+  $('zoom').style.display = 'none';
   const v = $('vid'); v.style.display = 'none'; v.srcObject = null; $('scBtn').textContent = '▶ 스캔 시작';
 }
 function onScan(t){
