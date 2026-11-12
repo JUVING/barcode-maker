@@ -414,3 +414,48 @@ function initQk(){
   };
 }
 initQk();
+
+
+/* ---------- 9) QR 가운데 로고 ---------- */
+// 오류 보정 H(약 30% 훼손까지 복구)로 QR 을 만들고, 가운데 약 24% 폭에 흰 바탕 + 로고를 얹는다.
+window.qrWithLogo = (it, big) => {
+  const q = qrcode(0, 'H'); q.addData(it.text); q.make();
+  const n = q.getModuleCount(), s = big ? 12 : 5, m = big ? 3 : 1, size = (n + 2 * m) * s;
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, size, size); g.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) g.fillRect((k + m) * s, (r + m) * s, s, s);
+  const L = Math.round(n * s * 0.24), x = Math.round((size - L) / 2), pad = Math.max(3, Math.round(L * 0.1)), rad = Math.round(L * 0.18);
+  const rr = (a, b, w, hh, r) => { g.beginPath(); g.moveTo(a + r, b); g.arcTo(a + w, b, a + w, b + hh, r); g.arcTo(a + w, b + hh, a, b + hh, r); g.arcTo(a, b + hh, a, b, r); g.arcTo(a, b, a + w, b, r); g.closePath(); };
+  g.fillStyle = '#fff'; rr(x - pad, x - pad, L + 2 * pad, L + 2 * pad, rad + pad); g.fill();
+  const im = it.logoImg, sc = Math.max(L / im.width, L / im.height), dw = im.width * sc, dh = im.height * sc;
+  g.save(); rr(x, x, L, L, rad); g.clip(); g.drawImage(im, x + (L - dw) / 2, x + (L - dh) / 2, dw, dh); g.restore();
+  const img = new Image(); img.src = c.toDataURL('image/png'); img.alt = 'QR';
+  if (big) img.style.cssText = 'width:min(72vw,320px);image-rendering:pixelated';
+  return img;
+};
+function logoUi(){
+  const it = cur(), row = $('vLogoRow'); if (!row) return;
+  row.classList.toggle('hidden', !(it && it.type === 'QR'));
+  $('vLogoDel').classList.toggle('hidden', !(it && it.logoImg));
+  $('vLogoAdd').textContent = it && it.logoImg ? '로고 바꾸기' : '가운데 로고 넣기';
+}
+(function(){
+  const _re = window.renderExtras;
+  window.renderExtras = () => { if (_re) _re(); logoUi(); };
+  $('vLogoAdd').onclick = () => $('vLogoFile').click();
+  $('vLogoDel').onclick = () => { const it = cur(); delete it.logoImg; redrawSlide(V.idx); logoUi(); toast('로고를 뺐어요'); };
+  $('vLogoFile').onchange = async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      const img = await loadImage(f), sc = Math.min(1, 320 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * sc)); c.height = Math.max(1, Math.round(img.height * sc));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const small = new Image(); small.src = c.toDataURL('image/png');
+      await new Promise((res, rej) => { small.onload = res; small.onerror = rej; });
+      const it = cur(); it.logoImg = small;                       // 기록에는 저장하지 않음(이 화면에서만)
+      redrawSlide(V.idx); logoUi();
+      toast('로고를 넣었어요. PNG 로 보내세요 (기록에는 로고가 남지 않아요)', 3600);
+    } catch(err){ toast('이미지를 불러오지 못했어요'); }
+  };
+})();

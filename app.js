@@ -78,6 +78,7 @@ function drawCode(host, it, big){
       host.append(h('img', { src: 'data:image/png;base64,' + b64, alt: it.type, style: big ? 'width:min(80vw,340px);image-rendering:pixelated' : '' }));
       return true;
     }
+    if (it.type === 'QR' && it.logoImg && window.qrWithLogo) { host.append(window.qrWithLogo(it, big)); return true; }       // 가운데 로고
     if (it.type === 'QR') {
       const q = qrcode(0, 'M'); q.addData(it.text); q.make();
       host.append(h('img', { src: q.createDataURL(big ? 10 : 4, big ? 2 : 1), alt: 'QR', style: big ? 'width:min(72vw,320px);image-rendering:pixelated' : '' }));
