@@ -312,7 +312,8 @@ function licApply(st){
   if (r === 'update') licUpdate();
 }
 function licRefresh(){
-  if (!NATIVE || !AndroidBridge.licenseState) return;
+  if (!NATIVE) { $('licState').textContent = '웹(브라우저) 버전이에요. 라이선스 확인은 안드로이드 앱에서만 해요'; const r = document.querySelector('#licBox .lockid'); if (r) r.classList.add('hidden'); return; }
+  if (!AndroidBridge.licenseState) { $('licState').textContent = '이 앱 버전은 라이선스 확인을 지원하지 않아요. 최신 앱(APK)을 새로 설치해 주세요'; return; }
   try { licApply(JSON.parse(AndroidBridge.licenseState())); } catch(e){}
 }
 let licUpBusy = false;
