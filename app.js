@@ -1,6 +1,10 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const NATIVE = !!(window.AndroidBridge && AndroidBridge.hasNative && AndroidBridge.hasNative());   // 안드로이드 앱(구글 ML Kit 사용)일 때만 true
+if (window.AndroidBridge && !NATIVE) {                      // 앱 안인데 아직 신뢰가 확정되지 않았으면 잠깐 뒤 다시 불러오기 (빠른 폰에서의 타이밍 문제)
+  let n = 0; try { n = +sessionStorage.getItem('bc_nr') || 0; sessionStorage.setItem('bc_nr', String(n + 1)); } catch(e){}
+  if (n < 3) setTimeout(() => location.reload(), 350);
+}
 // 웹(브라우저) 버전에서만 쓰는 보조 라이브러리: 안드로이드 앱에서는 구글 엔진을 쓰므로 불러오지 않음
 const LIBS = { tess: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', zx: 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js' };
 function loadLib(url){

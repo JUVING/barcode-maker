@@ -314,6 +314,7 @@ function licApply(st){
 function licRefresh(){
   if (!NATIVE) {
     $('licState').textContent = '웹(브라우저) 버전이에요. 라이선스 확인은 안드로이드 앱에서만 해요'; const r = document.querySelector('#licBox .lockid'); if (r) r.classList.add('hidden');
+    if (window.AndroidBridge) return;                                                   // 앱 안이면 차단하지 않음(위에서 다시 불러오는 중)
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;                  // 개발용(내 PC)만 예외
     licMode = 'web'; $('lockTitle').textContent = '안드로이드 앱에서만 사용할 수 있어요';
     $('lockMsg').textContent = '이 프로그램은 설치한 앱에서만 쓸 수 있어요. 앱 설치 파일은 관리자에게 받으세요.';
