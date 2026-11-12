@@ -499,7 +499,7 @@ async function liveShotDone(o){
   if (o.shotError) { btn.disabled = false; btn.textContent = '촬영해서 읽기'; return toast('촬영하지 못했어요. 다시 눌러 주세요', 2800); }
   try {
     const lines = await nativeOcr(o.shot), found = [];
-    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, ''); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
+    ocrPick(lines).forEach(f => found.push(f));
     btn.disabled = false; btn.textContent = '촬영해서 읽기';
     if (!found.length) return toast('글자를 찾지 못했어요. 틀을 글자에 맞추고 다시 찍어 보세요', 3200);
     haptic(); liveOff(false); showResults(found.map(f => ({ text: f.text, warn: f.warn })), '텍스트 인식');
@@ -734,11 +734,22 @@ function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블�
   }
   return mkVariant(a, w, 0, 0, w - 1, hh - 1, delta === null ? null : otsuTh(a) + delta);
 }
+const getKo = () => { try { return localStorage.getItem('bc_ocr_ko') === '1'; } catch(e){ return false; } };
 function nativeOcr(b64){
   return new Promise((res, rej) => {
     window.__nativeOcr = j => { try { const o = JSON.parse(j); o.error ? rej(new Error(o.error)) : res(o.lines || []); } catch(e){ rej(e); } };
-    AndroidBridge.ocr(b64);
+    if (AndroidBridge.ocr2) AndroidBridge.ocr2(b64, getKo()); else AndroidBridge.ocr(b64);
   });
+}
+// 인식한 줄에서 쓸 글자만 남김: 기본은 영문·숫자 코드용, '한글도 읽기'를 켜면 한글과 공백도 그대로 둠
+function ocrPick(lines){
+  const ko = getKo(), out = [];
+  lines.forEach(l => {
+    const raw = String(l.text || '');
+    const t = ko ? raw.replace(/[^A-Za-z0-9\-_.\/\u3131-\u318E\uAC00-\uD7A3 ]/g, '').replace(/\s+/g, ' ').trim() : raw.replace(/[^A-Za-z0-9\-_.\/]/g, '');
+    if (t.length >= (ko ? 2 : 4)) out.push({ text: t, warn: ko ? false : !validCode(t) });
+  });
+  return out;
 }
 async function ocrNative(sx, sy, sw, sh){                       // 안드로이드 앱: 구글 ML Kit 글자 인식
   ocrBusy = true; $('selRead').disabled = true; selStatus('글자 인식 중…');
@@ -748,7 +759,7 @@ async function ocrNative(sx, sy, sw, sh){                       // 안드로이�
     c.getContext('2d').drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
     const lines = await nativeOcr(c.toDataURL('image/jpeg', .92).split(',')[1]);
     const found = [];
-    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, ''); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
+    ocrPick(lines).forEach(f => found.push(f));
     if (!found.length) { selStatus('글자를 찾지 못했어요. 영역을 다시 지정해 주세요'); $('selRead').disabled = false; return; }
     ocrBusy = false; closeOverlayThen(() => showResults(found.map(f => ({ text: f.text, warn: f.warn })), '텍스트 인식'));
   } catch (err) { selStatus('인식 실패: ' + (err && err.message || err)); $('selRead').disabled = false; }
@@ -960,3 +971,9 @@ $('setResetUi').onclick = async () => { if (await ask('업데이트로 받은 �
 $('setClearHist').onclick = async () => { if (await ask('히스토리를 모두 삭제할까요?')) { saveHist([]); toast('삭제했어요'); } };
 
 if ('serviceWorker' in navigator && !NATIVE && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+(function(){                                                       // 텍스트 읽기: 한글도 읽기 스위치
+  const sw = $('koOn'); if (!sw) return;
+  sw.setAttribute('aria-checked', getKo() ? 'true' : 'false');
+  sw.onclick = () => { const on = !getKo(); try { localStorage.setItem('bc_ocr_ko', on ? '1' : '0'); } catch(e){} sw.setAttribute('aria-checked', on ? 'true' : 'false'); };
+})();
