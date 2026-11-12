@@ -283,3 +283,66 @@ window.renderSettingsExtras = () => { const x = loadScanExtra(); setSwitch($('se
 [['setVib', 'vibrate'], ['setSound', 'sound'], ['setAuto', 'autoClose']].forEach(([id, key]) => {
   $(id).onclick = () => { const o = store.get('bc_scan_opts', {}); const cur = key === 'vibrate' ? o.vibrate !== false : !!o[key]; o[key] = !cur; store.set('bc_scan_opts', o); setSwitch($(id), !cur); };
 });
+
+
+/* ---------- 7) 라이선스 잠금 + 최신 버전 강제 ---------- */
+let licMode = '';
+function licCopy(){ const id = $('licId').textContent; if (!id) return; try { AndroidBridge.copyDeviceId(); toast('기기 ID를 복사했어요'); } catch(e){} }
+$('licCopy').onclick = licCopy; $('licCopy2').onclick = licCopy;
+function licApply(st){
+  if (!st || st.ok === undefined) return;
+  $('licId').textContent = st.id || ''; $('licId2').textContent = st.id || '';
+  const lastTxt = st.lastCheck ? new Date(st.lastCheck).toLocaleString('ko-KR') : '아직 없음';
+  $('licState').textContent = (st.configured ? (st.ok ? '인증됨' : '인증 필요') : '라이선스 없음(개발용)') + ' · 마지막 업데이트 확인: ' + lastTxt;
+  const lock = $('lockScr');
+  if (st.ok) { lock.classList.remove('on'); licMode = ''; return; }
+  const r = st.reason; licMode = r;
+  const T = {
+    license: ['라이선스 인증', '이 앱을 사용하려면 개발자 비밀번호로 인증해 주세요.'],
+    revoked: ['사용이 중지된 기기', '이 기기는 라이선스가 회수되었어요. 관리자에게 문의하세요.'],
+    update: ['업데이트가 필요해요', '최신 버전이 아니면 사용할 수 없어요. 업데이트를 받는 중이에요.'],
+    apk: ['새 앱 설치가 필요해요', '앱 설치 파일(APK)을 새 버전으로 다시 설치해 주세요. 관리자에게 문의하세요.'],
+    offline: ['업데이트 확인이 필요해요', '오랫동안 최신 버전 확인을 하지 못했어요. 인터넷에 연결한 뒤 확인해 주세요.']
+  }[r] || ['사용할 수 없어요', '관리자에게 문의하세요.'];
+  $('lockTitle').textContent = T[0]; $('lockMsg').textContent = T[1];
+  $('lockPw').classList.toggle('hidden', r !== 'license');
+  $('lockUp').classList.toggle('hidden', !(r === 'update' || r === 'offline'));
+  $('lockSt').textContent = st.wait ? st.wait + '초 뒤에 다시 시도할 수 있어요' : '';
+  lock.classList.add('on');
+  if (r === 'update') licUpdate();
+}
+function licRefresh(){
+  if (!NATIVE || !AndroidBridge.licenseState) return;
+  try { licApply(JSON.parse(AndroidBridge.licenseState())); } catch(e){}
+}
+let licUpBusy = false;
+function licUpdate(){ if (licUpBusy) return; licUpBusy = true; $('lockSt').textContent = '업데이트 확인 중…'; try { AndroidBridge.checkUpdate(); } catch(e){ licUpBusy = false; } }
+$('lockUpBtn').onclick = () => { licUpBusy = false; licUpdate(); };
+$('lockGo').onclick = () => {
+  const pw = $('lockIn').value; if (!pw) return;
+  $('lockGo').disabled = true; $('lockSt').textContent = '확인 중…';
+  setTimeout(() => {
+    let r = {}; try { r = JSON.parse(AndroidBridge.licenseActivate(pw)); } catch(e){}
+    $('lockGo').disabled = false;
+    if (r.ok) { $('lockIn').value = ''; $('lockSt').textContent = ''; licRefresh(); toast('인증되었어요'); }
+    else { $('lockIn').value = ''; $('lockSt').textContent = (r.msg || '인증하지 못했어요'); }
+  }, 30);
+};
+$('lockIn').onkeydown = e => { if (e.key === 'Enter') $('lockGo').click(); };
+// 업데이트 상태가 올 때마다(자동 확인 포함) 잠금 상태를 다시 확인하고, 잠금 화면에서는 업데이트를 자동으로 받아 적용
+(function(){
+  const orig = window.__updateStatus;
+  window.__updateStatus = json => {
+    if (orig) orig(json);
+    let o = {}; try { o = JSON.parse(json); } catch(e){}
+    if (licMode === 'update' || licMode === 'offline') {
+      if (o.state === 'available') { try { AndroidBridge.applyUpdate(); } catch(e){} $('lockSt').textContent = '업데이트를 받는 중…'; return; }
+      if (o.state === 'applied') { setTimeout(() => location.reload(), 300); return; }
+      if (o.state === 'needApk') { licUpBusy = false; licRefresh(); return; }
+      if (o.state === 'error') { licUpBusy = false; $('lockSt').textContent = '업데이트에 실패했어요: ' + (o.error || '') ; return; }
+      licUpBusy = false;
+    }
+    licRefresh();
+  };
+})();
+licRefresh();

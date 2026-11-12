@@ -136,6 +136,11 @@
       <div class="row"><button class="btn" id="bkExport" type="button">백업 파일 보내기</button><button class="btn" id="bkImport" type="button">백업 불러오기</button></div>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
+    <div class="card" id="licBox">
+      <div class="t0" style="margin-top:0">라이선스</div>
+      <div class="pairsum" id="licState">확인 중…</div>
+      <div class="lockid" style="margin-top:8px">기기 ID <b id="licId2"></b> <button type="button" class="btn sm" id="licCopy2">복사</button></div>
+    </div>
     <div class="card" id="updBox">
       <div class="t">업데이트</div>
       <p class="hint" id="updMsg"></p>
@@ -214,6 +219,14 @@
   <div class="t2">규칙이 많으면 CSV·텍스트 파일로 불러오세요. 한 줄이 규칙 하나이고 칸마다 글자를 적습니다 (예: VP765,B050). 엑셀은 &quot;CSV UTF-8&quot;로 저장하세요</div>
   <input type="file" id="pairFile" accept=".csv,.txt,text/csv,text/plain" hidden>
   <div class="row" style="margin-top:12px"><button class="btn" id="pairNo" type="button">취소</button><button class="btn primary" id="pairYes" type="button">저장</button></div>
+</div></div>
+<div id="lockScr"><div class="lockbox">
+  <h2 id="lockTitle">라이선스 인증</h2>
+  <p id="lockMsg"></p>
+  <div class="lockid">기기 ID <b id="licId"></b> <button type="button" class="btn sm" id="licCopy">복사</button></div>
+  <div id="lockPw"><input type="password" id="lockIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="개발자 비밀번호"><button type="button" class="btn primary block" id="lockGo" style="margin-top:10px">확인</button></div>
+  <div id="lockUp" class="hidden"><button type="button" class="btn primary block" id="lockUpBtn">업데이트 확인</button></div>
+  <div class="lockst" id="lockSt"></div>
 </div></div>
 <div id="toast"></div>
 <div id="dlg"><div class="box2"><p id="dlgMsg"></p><div class="row"><button class="btn" id="dlgNo">취소</button><button class="btn primary" id="dlgYes">확인</button></div></div></div>

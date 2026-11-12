@@ -491,7 +491,7 @@ async function liveShotDone(o){
   if (o.shotError) { btn.disabled = false; btn.textContent = '촬영해서 읽기'; return toast('촬영하지 못했어요. 다시 눌러 주세요', 2800); }
   try {
     const lines = await nativeOcr(o.shot), found = [];
-    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase(); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
+    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, ''); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
     btn.disabled = false; btn.textContent = '촬영해서 읽기';
     if (!found.length) return toast('글자를 찾지 못했어요. 틀을 글자에 맞추고 다시 찍어 보세요', 3200);
     haptic(); liveOff(false); showResults(found.map(f => ({ text: f.text, warn: f.warn })), '텍스트 인식');
@@ -682,7 +682,7 @@ async function getWorker(){
   wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', end);
 })();
 
-const validCode = t => /^[A-Z0-9\-_.\/]{6,}$/.test(t) && /\d/.test(t) && /[A-Z]/.test(t);
+const validCode = t => /^[A-Za-z0-9\-_.\/]{6,}$/.test(t) && /\d/.test(t) && /[A-Za-z]/.test(t);
 function otsuTh(gr){
   const hist = new Array(256).fill(0), n = gr.length; let sum = 0;
   for (let i = 0; i < n; i++) { hist[gr[i]]++; sum += gr[i]; }
@@ -740,7 +740,7 @@ async function ocrNative(sx, sy, sw, sh){                       // 안드로이�
     c.getContext('2d').drawImage(srcCanvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
     const lines = await nativeOcr(c.toDataURL('image/jpeg', .92).split(',')[1]);
     const found = [];
-    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, '').toUpperCase(); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
+    lines.forEach(l => { const t = String(l.text || '').replace(/[^A-Za-z0-9\-_.\/]/g, ''); if (t.length >= 4) found.push({ text: t, warn: !validCode(t) }); });
     if (!found.length) { selStatus('글자를 찾지 못했어요. 영역을 다시 지정해 주세요'); $('selRead').disabled = false; return; }
     ocrBusy = false; closeOverlayThen(() => showResults(found.map(f => ({ text: f.text, warn: f.warn })), '텍스트 인식'));
   } catch (err) { selStatus('인식 실패: ' + (err && err.message || err)); $('selRead').disabled = false; }
