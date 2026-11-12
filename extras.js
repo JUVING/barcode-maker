@@ -320,7 +320,13 @@ function licRefresh(){
     $('lockPw').classList.add('hidden'); $('lockUp').classList.add('hidden'); const li = document.querySelector('#lockScr .lockid'); if (li) li.classList.add('hidden');
     $('lockScr').classList.add('on'); return;
   }
-  if (!AndroidBridge.licenseState) { $('licState').textContent = '이 앱 버전은 라이선스 확인을 지원하지 않아요. 최신 앱(APK)을 새로 설치해 주세요'; return; }
+  if (!AndroidBridge.licenseState) {                       // 라이선스 기능이 없는 옛 앱: 업데이트로 받은 화면이 사용을 막음
+    $('licState').textContent = '이 앱 버전은 라이선스 확인을 지원하지 않아요. 최신 앱(APK)을 새로 설치해 주세요';
+    licMode = 'oldapp'; $('lockTitle').textContent = '새 앱 설치가 필요해요';
+    $('lockMsg').textContent = '이 앱은 예전 버전이라 더 사용할 수 없어요. 기존 앱 위에 최신 설치 파일(APK)을 덮어 설치해 주세요. 관리자에게 받으세요.';
+    $('lockPw').classList.add('hidden'); $('lockUp').classList.add('hidden'); const li = document.querySelector('#lockScr .lockid'); if (li) li.classList.add('hidden');
+    $('lockScr').classList.add('on'); return;
+  }
   try { licApply(JSON.parse(AndroidBridge.licenseState())); } catch(e){}
 }
 let licUpBusy = false;
