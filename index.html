@@ -92,6 +92,8 @@
 <section id="v-manual" class="view">
   <div class="card" style="flex:none">
     <div class="row"><input type="text" id="manIn" placeholder="만들 내용을 입력하세요" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="manAdd" style="flex:none">만들기</button></div>
+    <div class="t0">QR 종류 <span class="t0s">명함 · 주소 · 와이파이를 QR 이미지로</span></div>
+    <div class="ctlrow" id="qrKinds"></div>
     <div class="t0">제어 문자 넣기 (라벨 형식 테스트용)</div>
     <div class="ctlrow" id="ctlRow"></div>
     <div class="t0">템플릿 <span class="t0s">눌러서 불러오기 · 길게 눌러 삭제</span></div>
@@ -227,6 +229,18 @@
   <div id="lockPw"><input type="password" id="lockIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="개발자 비밀번호"><button type="button" class="btn primary block" id="lockGo" style="margin-top:10px">확인</button></div>
   <div id="lockUp" class="hidden"><button type="button" class="btn primary block" id="lockUpBtn">업데이트 확인</button></div>
   <div class="lockst" id="lockSt"></div>
+</div></div>
+<div id="qrM"><div class="box2">
+  <p>QR 만들기</p>
+  <div class="seg" id="qkTabs"></div>
+  <div id="qkFields" class="qkfields"></div>
+  <div id="qkWifi" class="hidden">
+    <div class="row" style="margin-top:8px"><select id="qkSec"><option value="WPA">보안: WPA/WPA2/WPA3</option><option value="WEP">보안: WEP</option><option value="nopass">보안 없음</option></select></div>
+    <div class="swrow" style="margin-top:8px"><input type="checkbox" id="qkHid"><span>숨김 네트워크</span></div>
+    <div class="swrow" style="margin-top:6px"><input type="checkbox" id="qkNoSave" checked><span>기록에 남기지 않기 (권장)</span></div>
+  </div>
+  <div class="t2" id="qkNote"></div>
+  <div class="row" style="margin-top:12px"><button class="btn" id="qkNo" type="button">취소</button><button class="btn primary" id="qkGo" type="button">QR 만들기</button></div>
 </div></div>
 <div id="toast"></div>
 <div id="dlg"><div class="box2"><p id="dlgMsg"></p><div class="row"><button class="btn" id="dlgNo">취소</button><button class="btn primary" id="dlgYes">확인</button></div></div></div>

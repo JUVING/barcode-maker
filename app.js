@@ -57,6 +57,7 @@ function saveHist(list){
   catch(e){ try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, 30))); } catch(e2){} return false; }
 }
 function persist(batch){
+  if (batch.noSave) return;
   const list = loadHist(), i = list.findIndex(x => x.id === batch.id);
   const clean = { id: batch.id, time: batch.time, src: batch.src || '', title: batch.title || '', pin: !!batch.pin, items: batch.items.filter(x => x.text).map(({ text, type, fmt, ok }) => ({ text, type, fmt, ok })) };
   if (i >= 0) list[i] = clean; else list.unshift(clean);
@@ -65,6 +66,7 @@ function persist(batch){
 const persistSoon = debounce(b => persist(b), 300);
 
 /* ===== 코드 그리기 (QR / 바코드) ===== */
+try { if (qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8']; } catch(e){}      // QR 에 한글이 깨지지 않게 UTF-8 로 만듦
 function drawCode(host, it, big){
   host.replaceChildren();
   if (!it.text) return true;
@@ -111,12 +113,13 @@ const CTL_TXT = t => {
   return f;
 };
 /* 읽은/입력한 결과는 각 탭에 남기지 않고, 바로 상세 보기로 열면서 히스토리에만 저장한다 (src: 스캔 / 텍스트 인식 / 만들기) */
-function showResults(items, src){
+function showResults(items, src, opts){
   items = items.filter(i => i && i.text).map(i => ({ text: String(i.text), type: i.type || 'QR', warn: !!i.warn, fmt: fmtKey(i.fmt), ok: i.ok }));
   if (!items.length) return false;
   if (window.applyRef) items = window.applyRef(items, src);          // 기준값과 비교(설정한 경우)
   $('toast').classList.remove('on');
   const batch = { id: Date.now(), time: new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }), src, items };
+  if (opts && opts.noSave) batch.noSave = true;                        // 와이파이 비밀번호 등: 기록에 남기지 않음
   V.onClose = null; openViewer(batch, 0);
   return true;
 }

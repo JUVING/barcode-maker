@@ -361,3 +361,56 @@ $('lockIn').onkeydown = e => { if (e.key === 'Enter') $('lockGo').click(); };
   };
 })();
 licRefresh();
+
+
+/* ---------- 8) QR 종류: 명함 / 인터넷 주소 / 와이파이 / 전화·문자 ---------- */
+const QK = {
+  vcard: { name: '명함', fields: [['name', '이름', 1], ['org', '회사'], ['title', '직책'], ['tel', '전화', 0, 'tel'], ['email', '이메일', 0, 'email'], ['url', '홈페이지'], ['adr', '주소']] },
+  url: { name: '인터넷 주소', fields: [['url', '주소 (예: example.com)', 1, 'url']] },
+  wifi: { name: '와이파이', fields: [['ssid', '와이파이 이름 (SSID)', 1], ['pw', '비밀번호']] },
+  tel: { name: '전화·문자', fields: [['num', '전화번호', 1, 'tel'], ['msg', '문자 내용 (비우면 전화 걸기)']] }
+};
+let qkType = 'vcard';
+const vEsc = v => String(v || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+const wEsc = v => String(v || '').replace(/([\\;,:"])/g, '\\$1');
+function qkBuild(t, f){
+  if (t === 'vcard') {
+    const L = ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + vEsc(f.name) + ';;;;', 'FN:' + vEsc(f.name)];
+    if (f.org) L.push('ORG:' + vEsc(f.org)); if (f.title) L.push('TITLE:' + vEsc(f.title));
+    if (f.tel) L.push('TEL;TYPE=CELL:' + f.tel.replace(/[^0-9+\-() ]/g, '')); if (f.email) L.push('EMAIL:' + vEsc(f.email));
+    if (f.url) L.push('URL:' + f.url.trim()); if (f.adr) L.push('ADR;TYPE=WORK:;;' + vEsc(f.adr) + ';;;;');
+    L.push('END:VCARD'); return L.join('\n');
+  }
+  if (t === 'url') { const u = f.url.trim(); return /^[a-z][a-z0-9+.\-]*:/i.test(u) ? u : 'https://' + u; }
+  if (t === 'wifi') {
+    const sec = $('qkSec').value, hid = $('qkHid').checked;
+    return 'WIFI:T:' + (sec === 'nopass' ? 'nopass' : sec) + ';S:' + wEsc(f.ssid) + ';' + (sec === 'nopass' ? '' : 'P:' + wEsc(f.pw) + ';') + (hid ? 'H:true;' : '') + ';';
+  }
+  if (t === 'tel') { const n = f.num.replace(/[^0-9+]/g, ''); return f.msg ? 'SMSTO:' + n + ':' + f.msg : 'tel:' + n; }
+  return '';
+}
+function qkRender(){
+  const K = QK[qkType];
+  $('qkTabs').replaceChildren(...Object.keys(QK).map(k => h('button', { type: 'button', 'data-k': k, class: k === qkType ? 'on' : '' }, QK[k].name)));
+  const box = $('qkFields'); box.replaceChildren();
+  K.fields.forEach(([id, label, req, kind]) => box.append(h('input', { type: kind === 'email' ? 'email' : kind === 'tel' ? 'tel' : kind === 'url' ? 'url' : 'text', id: 'qk_' + id, placeholder: label + (req ? ' *' : ''), autocomplete: 'off', spellcheck: 'false', autocapitalize: 'off' })));
+  $('qkWifi').classList.toggle('hidden', qkType !== 'wifi');
+  $('qkNote').textContent = qkType === 'wifi' ? '와이파이 정보는 이 폰 안에서만 이미지로 만들어요. 기본으로 기록에 남기지 않아요.' : qkType === 'vcard' ? '카메라로 비추면 연락처에 저장할 수 있는 명함 QR이 돼요.' : qkType === 'url' ? '카메라로 비추면 이 주소가 열려요.' : '카메라로 비추면 전화를 걸거나 문자를 보낼 수 있어요.';
+}
+function initQk(){
+  const kinds = $('qrKinds');
+  kinds.replaceChildren(...Object.keys(QK).map(k => h('button', { type: 'button', class: 'chip', 'data-k': k }, QK[k].name)));
+  kinds.onclick = e => { const b = e.target.closest('button'); if (!b) return; qkType = b.dataset.k; qkRender(); $('qrM').classList.add('on'); };
+  $('qkTabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; qkType = b.dataset.k; qkRender(); };
+  $('qkNo').onclick = () => $('qrM').classList.remove('on');
+  $('qkGo').onclick = () => {
+    const f = {}; let miss = null;
+    QK[qkType].fields.forEach(([id, label, req]) => { const v = ($('qk_' + id).value || '').trim(); f[id] = v; if (req && !v && !miss) miss = label.replace(/ \(.*\)/, ''); });
+    if (miss) return toast(miss + '을(를) 입력해 주세요', 2600);
+    const text = qkBuild(qkType, f); if (!text) return;
+    const noSave = qkType === 'wifi' && $('qkNoSave').checked;
+    $('qrM').classList.remove('on');
+    showResults([{ text, type: 'QR' }], '만들기', { noSave });
+  };
+}
+initQk();
