@@ -312,7 +312,14 @@ function licApply(st){
   if (r === 'update') licUpdate();
 }
 function licRefresh(){
-  if (!NATIVE) { $('licState').textContent = '웹(브라우저) 버전이에요. 라이선스 확인은 안드로이드 앱에서만 해요'; const r = document.querySelector('#licBox .lockid'); if (r) r.classList.add('hidden'); return; }
+  if (!NATIVE) {
+    $('licState').textContent = '웹(브라우저) 버전이에요. 라이선스 확인은 안드로이드 앱에서만 해요'; const r = document.querySelector('#licBox .lockid'); if (r) r.classList.add('hidden');
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;                  // 개발용(내 PC)만 예외
+    licMode = 'web'; $('lockTitle').textContent = '안드로이드 앱에서만 사용할 수 있어요';
+    $('lockMsg').textContent = '이 프로그램은 설치한 앱에서만 쓸 수 있어요. 앱 설치 파일은 관리자에게 받으세요.';
+    $('lockPw').classList.add('hidden'); $('lockUp').classList.add('hidden'); const li = document.querySelector('#lockScr .lockid'); if (li) li.classList.add('hidden');
+    $('lockScr').classList.add('on'); return;
+  }
   if (!AndroidBridge.licenseState) { $('licState').textContent = '이 앱 버전은 라이선스 확인을 지원하지 않아요. 최신 앱(APK)을 새로 설치해 주세요'; return; }
   try { licApply(JSON.parse(AndroidBridge.licenseState())); } catch(e){}
 }
