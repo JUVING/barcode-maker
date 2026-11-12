@@ -734,7 +734,7 @@ function mkVariant2(gr, W, x0, y0, x1, y1, blur, delta){   // 줄을 잘라 블�
   }
   return mkVariant(a, w, 0, 0, w - 1, hh - 1, delta === null ? null : otsuTh(a) + delta);
 }
-const getKo = () => { try { return localStorage.getItem('bc_ocr_ko') === '1'; } catch(e){ return false; } };
+const getKo = () => { try { return localStorage.getItem('bc_ocr_ko') !== '0'; } catch(e){ return true; } };       // 기본: 한글도 읽기 켜짐 (한글 모델은 영문·숫자도 함께 읽음)
 function nativeOcr(b64){
   return new Promise((res, rej) => {
     window.__nativeOcr = j => { try { const o = JSON.parse(j); o.error ? rej(new Error(o.error)) : res(o.lines || []); } catch(e){ rej(e); } };
