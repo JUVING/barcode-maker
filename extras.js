@@ -169,7 +169,9 @@ window.renderExtras = () => { renderCheck(); renderFields(); };
 
 /* ---------- 4) 내보내기 / 백업 / 복원 ---------- */
 const ctlVisible = s => String(s).replace(/[\x00-\x1f\x7f]/g, c => ({ '\x1d': '<GS>', '\x1e': '<RS>', '\x04': '<EOT>', '\x1c': '<FS>', '\x1f': '<US>' }[c] || '<0x' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0') + '>'));
-const csvCell = v => { v = String(v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+// CSV 수식 주입 방어: 엑셀이 수식으로 실행할 수 있는 시작 글자(= + @ 탭 줄바꿈, 숫자가 아닌 -)는 앞에 ' 를 붙여 글자로 취급되게 함
+const csvSafe = v => (/^[=+@\t\r]/.test(v) || (/^-/.test(v) && !/^-\d+(\.\d+)?$/.test(v))) ? "'" + v : v;
+const csvCell = v => { v = csvSafe(String(v)); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
 const TYPE_NAME = { QR: 'QR', CODE128: 'Code128', CODE39: 'Code39', DATAMATRIX: 'DataMatrix', PDF417: 'PDF417' };
 const okText = ok => ok === true ? '일치' : ok === false ? '불일치' : '';
 function cleanBatch(b){
