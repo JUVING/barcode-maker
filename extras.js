@@ -32,27 +32,26 @@ function getRef(){
   return { on: !!o.on, list: String(o.list || ''), mode: REF_MODES.some(m => m[0] === o.mode) ? o.mode : 'equals' };
 }
 const refLines = r => r.list.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+function matchRef(text, r){
+  const lines = refLines(r); if (!lines.length) return null;
+  const n = ctlNorm(text);
+  return lines.some(l => r.mode === 'contains' ? n.includes(l) : r.mode === 'starts' ? n.startsWith(l) : n === l);
+}
 /* 이종 검사: 한 줄에 한 규칙, '+' 로 연결 (예: A100 + A101). 코드 한 개 안에 규칙의 글자가 모두 들어 있어야 정상 (규칙이 여럿이면 하나만 맞아도 정상) */
 function getPair(){ const o = store.get('bc_pair', {}); return { on: getMode() === 'pair', text: String(o.text || '') }; }       // '이종 검사' 탭일 때만 적용
 const pairGroups = p => p.text.split(/\r?\n/).map(l => l.split('+').map(s => s.trim()).filter(Boolean)).filter(g => g.length >= 2);
-/** 판정 본체: 설정을 읽지 않는 순수 함수. lines=기준값 목록, mode=전체/포함/시작, groups=이종 검사 규칙 */
-function judgeItems(items, lines, mode, groups){
-  if (!lines.length && !groups.length) return items;
-  const match = t => { const n = ctlNorm(t); return lines.some(l => mode === 'contains' ? n.includes(l) : mode === 'starts' ? n.startsWith(l) : n === l); };
+window.applyRef = (items, src) => {                         // 읽은 결과에 일치 여부(ok)를 붙임 (만들기는 제외)
+  const r = getRef(), p = getPair(), lines = r.on ? refLines(r) : [], groups = p.on ? pairGroups(p) : [];
+  if ((!lines.length && !groups.length) || src === '만들기') return items;
+  const all = items.map(i => ctlNorm(i.text));
   return items.map(i => {
     const n = ctlNorm(i.text), miss = [];
-    const base = lines.length ? match(i.text) : true;
+    const base = lines.length ? matchRef(i.text, r) === true : true;
     const hit = groups.filter(g => g.some(t => n.includes(t))), unk = groups.length > 0 && !hit.length;       // 규칙에 없는 코드는 불일치
     const lack = g => g.filter(t => !n.includes(t));                                                      // 코드 한 개 안에 규칙의 글자가 모두 있어야 정상
     if (hit.length && !hit.some(g => !lack(g).length)) lack(hit.slice().sort((x, y) => lack(x).length - lack(y).length)[0]).forEach(t => miss.push(t));
     return Object.assign({}, i, { ok: base && !miss.length && !unk }, miss.length ? { miss } : {}, unk ? { unk: true } : {});
   });
-}
-window.judgeItems = judgeItems;
-window.applyRef = (items, src) => {                         // 읽은 결과에 일치 여부(ok)를 붙임 (만들기는 제외)
-  const r = getRef(), p = getPair(), lines = r.on ? refLines(r) : [], groups = p.on ? pairGroups(p) : [];
-  if (src === '만들기') return items;
-  return judgeItems(items, lines, r.mode, groups);
 };
 window.refForNative = () => {
   const r = getRef(), p = getPair(), lines = r.on ? refLines(r) : [], groups = p.on ? pairGroups(p) : [];
@@ -458,52 +457,5 @@ function logoUi(){
       redrawSlide(V.idx); logoUi();
       toast('로고를 넣었어요. PNG 로 보내세요 (기록에는 로고가 남지 않아요)', 3600);
     } catch(err){ toast('이미지를 불러오지 못했어요'); }
-  };
-})();
-
-
-/* ---------- 10) 판정 자동 점검 (설정 탭) ---------- */
-// 규칙·코드·기대 결과(true=일치, false=불일치). 판정 로직을 고칠 때마다 눌러 보면 예전 기능이 깨졌는지 바로 알 수 있다.
-const T_GS = '\x1d', T_RS = '\x1e', T_EOT = '\x04';
-const T_LBL = (x, y) => '[)>' + T_RS + '06' + T_GS + 'VP765' + T_GS + 'P' + x + T_GS + 'S' + T_GS + 'T' + y + T_GS + 'CKAIS' + T_GS + T_RS + T_EOT;
-const T_PAIR3 = [['VP765', 'B050'], ['VP765', 'B070'], ['VP765', 'NX8']];
-const SELFTESTS = [
-  { n: '이종 검사: 짝이 맞는 라벨(B050)은 일치', g: T_PAIR3, c: [T_LBL('83SU2XB050NNB', '2611110003A')], e: [true] },
-  { n: '이종 검사: 다른 규칙(B070)도 일치', g: T_PAIR3, c: [T_LBL('83SU2XB070NNB', '2611110004A')], e: [true] },
-  { n: '이종 검사: 규칙에 없는 라벨(NX9)은 불일치', g: T_PAIR3, c: [T_LBL('SBUC NX9', '2611110004A')], e: [false] },
-  { n: '이종 검사: 라벨 3개(일치2·불일치1)를 한 묶음으로 판정', g: T_PAIR3, c: [T_LBL('83SU2XB070NNB', '1'), T_LBL('SBUC NX9', '2'), T_LBL('83SU2XB050NNB', '3')], e: [true, false, true] },
-  { n: '이종 검사: 일치하는 항목은 다른 항목이 불일치여도 일치', g: T_PAIR3, c: [T_LBL('83SU2XB050NNB', '1'), 'ZZZ999'], e: [true, false] },
-  { n: '이종 검사: 규칙에 아예 없는 코드는 불일치', g: T_PAIR3, c: ['HELLO1234'], e: [false] },
-  { n: '이종 검사: 한 코드에 규칙 글자가 일부만 있으면 불일치', g: [['A100', 'A101']], c: ['XXA100XX'], e: [false] },
-  { n: '이종 검사: 글자 순서와 상관없이 모두 있으면 일치', g: [['A100', 'A101']], c: ['A101-zz-A100'], e: [true] },
-  { n: '이종 검사: 대소문자를 구분', g: [['abc', 'xyz']], c: ['ABC-XYZ', 'abc-xyz'], e: [false, true] },
-  { n: '이종 검사: 3개 글자 규칙', g: [['A', 'B', 'C']], c: ['ABC', 'AB'], e: [true, false] },
-  { n: '이종 검사: 규칙 여러 줄 중 하나만 맞아도 일치', g: [['A1', 'B1'], ['A2', 'B2']], c: ['A2B2', 'A1B2'], e: [true, false] },
-  { n: '기준값: 전체 일치', l: ['ABC123'], m: 'equals', c: ['ABC123', 'ABC1234', 'abc123'], e: [true, false, false] },
-  { n: '기준값: 포함', l: ['VP765'], m: 'contains', c: [T_LBL('83SU2XB050NNB', '1'), 'XX'], e: [true, false] },
-  { n: '기준값: 시작 일치', l: ['[)>'], m: 'starts', c: [T_LBL('1', '1'), 'A[)>'], e: [true, false] },
-  { n: '기준값: 여러 줄 중 하나라도 맞으면 일치', l: ['A', 'B'], m: 'equals', c: ['A', 'B', 'C'], e: [true, true, false] },
-  { n: '기준값: 제어 문자를 <GS> 표기로 비교', l: ['AB<GS>CD<RS>'], m: 'equals', c: ['AB' + T_GS + 'CD' + T_RS, 'ABCD'], e: [true, false] },
-  { n: '기준값 + 이종 검사를 같이 쓰면 둘 다 맞아야 일치', l: ['A100B'], m: 'contains', g: [['A100', 'B']], c: ['A100B', 'A100'], e: [true, false] },
-  { n: '규칙이 없으면 판정하지 않음(그대로 반환)', c: ['아무거나'], e: [undefined] },
-];
-function runSelfTests(){
-  let pass = 0; const fails = [];
-  SELFTESTS.forEach(t => {
-    let got;
-    try { got = judgeItems(t.c.map(x => ({ text: x })), t.l || [], t.m || 'equals', t.g || []).map(i => i.ok); } catch(e){ got = ['오류: ' + e.message]; }
-    const ok = got.length === t.e.length && got.every((v, i) => v === t.e[i]);
-    if (ok) pass++; else fails.push({ n: t.n, e: t.e, got });
-  });
-  return { total: SELFTESTS.length, pass, fails };
-}
-window.runSelfTests = runSelfTests;
-(function(){
-  const btn = $('stRun'); if (!btn) return;
-  btn.onclick = () => {
-    const r = runSelfTests(), box = $('stOut');
-    const head = h('div', { class: r.fails.length ? 'stbad' : 'stok' }, (r.fails.length ? '실패 있음 ' : '모두 통과 ') + r.pass + ' / ' + r.total);
-    const rows = r.fails.map(f => h('div', { class: 'stfail' }, f.n + ' — 기대 ' + JSON.stringify(f.e) + ' / 결과 ' + JSON.stringify(f.got)));
-    box.replaceChildren(head, ...rows);
   };
 })();
