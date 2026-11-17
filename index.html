@@ -139,6 +139,12 @@
       <div class="row"><button class="btn" id="bkExport" type="button">백업 파일 보내기</button><button class="btn" id="bkImport" type="button">백업 불러오기</button></div>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
+    <div class="card" id="stBox">
+      <div class="t0" style="margin-top:0">판정 자동 점검</div>
+      <div class="pairsum">기준값 비교와 이종 검사의 판정이 맞는지 예제 코드로 한 번에 확인해요. 폰 안에서만 동작하고 기록에는 남지 않아요.</div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn sm" id="stRun">점검 실행</button></div>
+      <div id="stOut" class="stout"></div>
+    </div>
     <div class="card" id="licBox">
       <div class="t0" style="margin-top:0">라이선스</div>
       <div class="pairsum" id="licState">확인 중…</div>
