@@ -80,7 +80,7 @@ input[type=range]{width:100%;accent-color:var(--acc);margin:8px 0}
 /* 카메라 */
 .camwrap{display:none;position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:16/10;margin-bottom:10px}
 .camwrap.on{display:block}
-.camwrap.nlive{aspect-ratio:4/5;max-height:46vh;margin-bottom:8px}
+.camwrap.nlive{aspect-ratio:auto;width:100%;height:min(46vh,125vw);margin-bottom:8px}                /* 폭은 항상 꽉 채우고 높이만 제한 (비율 고정이면 높이가 제한될 때 폭까지 줄어듦) */
 .hide{display:none!important}
 .livepanel{margin-bottom:8px}
 .livehead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -272,3 +272,4 @@ header{align-items:center}
 .lockst{margin-top:14px;font-size:13px;color:var(--danger);min-height:18px}
 #lockIn{background:var(--surface2);color:var(--fg);border:1px solid var(--line,rgba(255,255,255,.12));border-radius:14px;padding:13px 14px;font-size:16px;outline:none}
 .qkfields{display:flex;flex-direction:column;gap:8px;margin-top:10px}.qkfields input,#qrM select{width:100%;box-sizing:border-box;background:var(--surface2);color:var(--fg);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 12px;font-size:15px;outline:none}#qrM .swrow input[type=checkbox]{width:20px;height:20px;flex:none}#qrM .box2{max-height:92vh;overflow:auto}
+.stout{margin-top:8px;font-size:12.5px;line-height:1.5;word-break:break-all}.stok{color:#2ea043;font-weight:800}.stbad{color:var(--danger);font-weight:800}.stfail{color:var(--danger);margin-top:4px}
