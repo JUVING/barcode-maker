@@ -977,3 +977,10 @@ if ('serviceWorker' in navigator && !NATIVE && location.protocol.indexOf('http')
   sw.setAttribute('aria-checked', getKo() ? 'true' : 'false');
   sw.onclick = () => { const on = !getKo(); try { localStorage.setItem('bc_ocr_ko', on ? '1' : '0'); } catch(e){} sw.setAttribute('aria-checked', on ? 'true' : 'false'); };
 })();
+
+(function(){                                                       // 상세 화면: 글자 수정 중에는 QR 을 접어 수정할 글자가 보이게 함
+  const v = $('viewer'), t = $('vText'); if (!v || !t) return;
+  let off = 0;
+  t.addEventListener('focus', () => { clearTimeout(off); v.classList.add('editing'); setTimeout(() => { try { $('vRaw').scrollIntoView({ block: 'start' }); } catch(e){} }, 120); });
+  t.addEventListener('blur', () => { off = setTimeout(() => v.classList.remove('editing'), 150); });
+})();

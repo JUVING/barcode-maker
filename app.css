@@ -273,3 +273,10 @@ header{align-items:center}
 #lockIn{background:var(--surface2);color:var(--fg);border:1px solid var(--line,rgba(255,255,255,.12));border-radius:14px;padding:13px 14px;font-size:16px;outline:none}
 .qkfields{display:flex;flex-direction:column;gap:8px;margin-top:10px}.qkfields input,#qrM select{width:100%;box-sizing:border-box;background:var(--surface2);color:var(--fg);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 12px;font-size:15px;outline:none}#qrM .swrow input[type=checkbox]{width:20px;height:20px;flex:none}#qrM .box2{max-height:92vh;overflow:auto}
 .stout{margin-top:8px;font-size:12.5px;line-height:1.5;word-break:break-all}.stok{color:#2ea043;font-weight:800}.stbad{color:var(--danger);font-weight:800}.stfail{color:var(--danger);margin-top:4px}
+/* 글자 수정 중(키보드가 올라온 동안): 큰 QR 은 작게 접고 수정할 글자 줄이 키보드에 가려지지 않게 함 */
+#viewer.editing #vSlides{max-height:96px;overflow-y:hidden}
+#viewer.editing .vslide{padding:8px 16px 2px}
+#viewer.editing .vcode{padding:6px;min-height:0;max-width:150px}
+#viewer.editing .vcode img,#viewer.editing .vcode canvas{max-height:78px;width:auto;max-width:100%}
+#viewer.editing .dots,#viewer.editing .vtitlebox,#viewer.editing #vMeta{display:none}
+#viewer.editing .vinfo{padding-top:4px}
