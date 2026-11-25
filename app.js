@@ -983,4 +983,18 @@ if ('serviceWorker' in navigator && !NATIVE && location.protocol.indexOf('http')
   let off = 0;
   t.addEventListener('focus', () => { clearTimeout(off); v.classList.add('editing'); setTimeout(() => { try { $('vRaw').scrollIntoView({ block: 'start' }); } catch(e){} }, 120); });
   t.addEventListener('blur', () => { off = setTimeout(() => v.classList.remove('editing'), 150); });
+  // 뒤로가기로 키보드만 내리면 입력칸이 포커스를 잃지 않아 blur 가 오지 않는다 -> 화면 높이가 다시 커지면(키보드가 내려감) 수정 모드를 끝냄
+  let kbLow = 0;
+  const hv = () => (window.visualViewport ? visualViewport.height : innerHeight);
+  const onSize = () => {
+    const h = hv();
+    if (v.classList.contains('editing')) {
+      kbLow = kbLow ? Math.min(kbLow, h) : h;                           // 키보드가 올라온 동안 가장 낮았던 높이
+      if (h > kbLow + 120) { kbLow = 0; try { t.blur(); } catch(e){} v.classList.remove('editing'); }
+    } else kbLow = 0;
+  };
+  window.addEventListener('resize', onSize);
+  if (window.visualViewport) visualViewport.addEventListener('resize', onSize);
+  v.addEventListener('transitionend', onSize);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { kbLow = 0; v.classList.remove('editing'); } });
 })();
