@@ -428,6 +428,7 @@ let liveActive = false, liveCodes = [], liveCollectOn = false, liveTorchOn = fal
 let liveKind = 'code';
 function liveRectPx(){ const r = $(liveKind === 'text' ? 'camwrapT' : 'camwrap').getBoundingClientRect(), d = window.devicePixelRatio || 1; return [Math.round(r.left * d), Math.round(r.top * d), Math.round(r.width * d), Math.round(r.height * d)]; }
 function liveUi(on){
+  const lv = $('v-live'); lv.style.overflowY = on ? 'hidden' : ''; if (on) lv.scrollTop = 0;                  // 카메라가 켜진 동안은 스크롤을 잠가 카메라 위치가 어긋나지 않게 함
   $('camwrap').classList.toggle('on', on); $('camwrap').classList.toggle('nlive', on);
   $('livePanel').classList.toggle('hidden', !on);
   document.querySelectorAll('#paneCode .tips,#refCard,#pairCard').forEach(e => e.classList.toggle('hide', on));
@@ -480,6 +481,7 @@ $('liveMode2').onclick = () => { liveCollectOn = !liveCollectOn; $('liveMode2').
 
 /* --- 텍스트 읽기: 탭 안 카메라 + ROI 틀 → 촬영해서 틀 안쪽 글자 읽기 --- */
 function liveTextUi(on){
+  const lv = $('v-live'); lv.style.overflowY = on ? 'hidden' : ''; if (on) lv.scrollTop = 0;
   $('textCam').classList.toggle('hidden', !on); $('camwrapT').classList.toggle('on', on); $('camwrapT').classList.toggle('nlive', on);
   $('textHero').classList.toggle('hide', on); $('liveMode').classList.toggle('hide', on);
   document.querySelectorAll('#paneText .tips').forEach(e => e.classList.toggle('hide', on));

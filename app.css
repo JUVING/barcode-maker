@@ -19,7 +19,10 @@ header{padding:calc(14px + env(safe-area-inset-top)) 20px 10px;display:flex;alig
 h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.3px}
 #sub{margin:2px 0 0;font-size:12.5px;color:var(--mut)}
 main{flex:1;min-height:0;overflow:hidden;padding:4px 16px 10px;display:flex;flex-direction:column}
-.view{display:none}.view.on{display:flex;flex-direction:column;flex:1;min-height:0}
+.view{display:none}.view.on{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+.view.on>*{flex-shrink:0}                       /* 내용이 길면 줄어들지 않고 화면이 위아래로 움직임 (최근 스캔/만들기 목록까지 볼 수 있게) */
+.view.on::-webkit-scrollbar{display:none}
+#v-hist.view.on>*{flex-shrink:1}
 #liveList,#ocrList,#histList,#manList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
