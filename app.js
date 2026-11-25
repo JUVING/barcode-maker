@@ -270,25 +270,39 @@ function showSel(){
       h('button', { class: 'chipbtn', onclick: () => { SEL.a = SEL.b = -1; showSel(); } }, '선택 해제')));
 }
 (function(){
+  // 글자 선택: 위아래로 미는 동작은 화면 스크롤(touch-action: pan-y), 가로로 끄는 동작은 글자 선택, 가볍게 누르면 한 글자, 두 번 누르면 한 덩어리
   const box = $('vRaw');
   const idxAt = (x, y) => { const t = document.elementFromPoint(x, y), el = t && t.closest ? t.closest('#vRaw .ch') : null; return el ? +el.dataset.i : -1; };
+  let st = null;
   box.addEventListener('pointerdown', e => {
-    const i = idxAt(e.clientX, e.clientY); if (i < 0) return;
-    const now = Date.now();
-    if (now - SEL.last < 380 && SEL.lastIdx === i) {                       // 두 번 누르기: 한 덩어리 선택
-      const [a, b] = selToken(i); SEL.a = a; SEL.b = b; showSel(); SEL.last = 0; return;
-    }
-    SEL.last = now; SEL.lastIdx = i; SEL.drag = true; SEL.anchor = i; SEL.a = SEL.b = i;
-    try { box.setPointerCapture(e.pointerId); } catch(_){}
-    showSel();
+    const i = idxAt(e.clientX, e.clientY);
+    st = i < 0 ? null : { x: e.clientX, y: e.clientY, i, id: e.pointerId, moved: false };
+    SEL.drag = false;
   });
   box.addEventListener('pointermove', e => {
-    if (!SEL.drag) return;
+    if (!st) return;
+    const dx = Math.abs(e.clientX - st.x), dy = Math.abs(e.clientY - st.y);
+    if (dx > 6 || dy > 6) st.moved = true;
+    if (!SEL.drag) {
+      if (dx > 8 && dx > dy) {                                            // 가로로 끌기 시작 -> 선택 시작
+        SEL.drag = true; SEL.anchor = st.i; SEL.a = SEL.b = st.i; SEL.last = 0;
+        try { box.setPointerCapture(st.id); } catch(_){}
+        showSel();
+      }
+      return;
+    }
     const i = idxAt(e.clientX, e.clientY); if (i < 0 || i === SEL.b) return;
     SEL.b = i; showSel();
   });
-  const end = () => { SEL.drag = false; };
-  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+  box.addEventListener('pointerup', e => {
+    if (st && !st.moved && !SEL.drag) {                                    // 가볍게 누름
+      const i = st.i, now = Date.now();
+      if (now - SEL.last < 380 && SEL.lastIdx === i) { const [a, b] = selToken(i); SEL.a = a; SEL.b = b; showSel(); SEL.last = 0; }
+      else { SEL.last = now; SEL.lastIdx = i; SEL.a = SEL.b = i; showSel(); }
+    }
+    SEL.drag = false; st = null;
+  });
+  box.addEventListener('pointercancel', () => { SEL.drag = false; st = null; });          // 위아래 스크롤이 시작되면 취소됨 -> 선택하지 않음
 })();
 
 // 글자/선택 정보 밖의 빈 곳을 누르면 선택 해제
